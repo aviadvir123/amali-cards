@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>עמלי - QR Code</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #F5F5F5;
+    }
+
+    .qr-card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+    }
+
+    .shop-name {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: rgb(32, 80, 130);
+      margin-bottom: 4px;
+    }
+
+    .shop-subtitle {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: rgb(32, 80, 130);
+      letter-spacing: 0.15em;
+      margin-bottom: 20px;
+    }
+
+    .qr-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: rgb(32, 80, 130);
+      margin-bottom: 24px;
+    }
+
+    .qr-placeholder {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 24px;
+      border: 3px dashed rgb(32, 80, 130);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgb(32, 80, 130);
+      opacity: 0.6;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .qr-placeholder-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .qr-instruction {
+      font-size: 1rem;
+      font-weight: 500;
+      color: rgb(32, 80, 130);
+      margin-bottom: 8px;
+    }
+
+    .qr-url {
+      font-size: 0.7rem;
+      color: #999;
+      word-break: break-all;
+      direction: ltr;
+    }
+
+    .divider {
+      width: 60px;
+      height: 2px;
+      background: rgba(32, 80, 130, 0.2);
+      margin: 20px auto;
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: #FFFFFF;
+        min-height: auto;
+      }
+
+      .qr-card {
+        box-shadow: none;
+        border: 2px solid rgb(32, 80, 130);
+        max-width: none;
+        width: 10cm;
+        padding: 1.5cm 1cm;
+        border-radius: 8px;
+      }
+
+      .qr-placeholder {
+        width: 6cm;
+        height: 6cm;
+      }
+
+      .no-print {
+        display: none;
+      }
+    }
+
+    /* Screen-only: print button */
+    .print-btn {
+      display: block;
+      margin: 24px auto 0;
+      padding: 10px 32px;
+      background: rgb(32, 80, 130);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .print-btn:active {
+      opacity: 0.85;
+    }
+
+    @media print {
+      .print-btn {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="qr-card">
+    <h1 class="shop-name">עמלי</h1>
+    <p class="shop-subtitle">AMALI COFFEE</p>
+
+    <div class="divider"></div>
+
+    <p class="qr-title">כרטיס ניקוב דיגיטלי</p>
+
+    <!-- QR Code placeholder — replace with actual QR code SVG once the URL is known -->
+    <div class="qr-placeholder" id="qr-container">
+      <span class="qr-placeholder-icon">&#9633;</span>
+      <span>QR Code</span>
+      <span>will be generated</span>
+      <span>for the final URL</span>
+    </div>
+
+    <p class="qr-instruction">סרקו כדי להתחיל</p>
+    <p class="qr-instruction" style="font-size: 0.85rem; opacity: 0.7;">Scan to start</p>
+
+    <div class="divider"></div>
+
+    <p class="qr-url" id="qr-url">https://YOUR-USERNAME.github.io/nikuv/</p>
+
+    <button class="print-btn no-print" onclick="window.print()">הדפסה / Print</button>
+  </div>
+
+</body>
+</html>

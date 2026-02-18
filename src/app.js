@@ -543,7 +543,7 @@ function dismissCelebration() {
     render();
     unlockUI();
 
-    showToast("כרטיס חדש!");
+    showToast("כרטיסיה חדשה :)");
   }, 300);
 }
 

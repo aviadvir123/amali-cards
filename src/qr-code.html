@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>עמלי - QR Code</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -31,7 +32,7 @@
     }
 
     .shop-name {
-      font-size: 2.2rem;
+      font-size: 2.42rem;
       font-weight: 700;
       color: rgb(32, 80, 130);
       margin-bottom: 4px;
@@ -49,28 +50,26 @@
       font-size: 1.1rem;
       font-weight: 600;
       color: rgb(32, 80, 130);
+      margin-bottom: 6px;
+    }
+
+    .qr-subtitle {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: rgb(32, 80, 130);
+      opacity: 0.75;
       margin-bottom: 24px;
     }
 
-    .qr-placeholder {
-      width: 200px;
-      height: 200px;
+    #qr-container {
       margin: 0 auto 24px;
-      border: 3px dashed rgb(32, 80, 130);
-      border-radius: 12px;
       display: flex;
-      flex-direction: column;
-      align-items: center;
       justify-content: center;
-      color: rgb(32, 80, 130);
-      opacity: 0.6;
-      font-size: 0.85rem;
-      line-height: 1.5;
     }
 
-    .qr-placeholder-icon {
-      font-size: 2rem;
-      margin-bottom: 8px;
+    #qr-container canvas,
+    #qr-container img {
+      border-radius: 8px;
     }
 
     .qr-instruction {
@@ -110,11 +109,6 @@
         border-radius: 8px;
       }
 
-      .qr-placeholder {
-        width: 6cm;
-        height: 6cm;
-      }
-
       .no-print {
         display: none;
       }
@@ -150,29 +144,30 @@
 
   <div class="qr-card">
     <h1 class="shop-name">עמלי</h1>
-    <p class="shop-subtitle">AMALI COFFEE</p>
+    <p class="shop-subtitle">عملي &nbsp;·&nbsp; Amali</p>
 
     <div class="divider"></div>
 
     <p class="qr-title">כרטיס ניקוב דיגיטלי</p>
+    <p class="qr-subtitle">קפה עשירי חינם :)</p>
 
-    <!-- QR Code placeholder — replace with actual QR code SVG once the URL is known -->
-    <div class="qr-placeholder" id="qr-container">
-      <span class="qr-placeholder-icon">&#9633;</span>
-      <span>QR Code</span>
-      <span>will be generated</span>
-      <span>for the final URL</span>
-    </div>
-
-    <p class="qr-instruction">סרקו כדי להתחיל</p>
-    <p class="qr-instruction" style="font-size: 0.85rem; opacity: 0.7;">Scan to start</p>
+    <div id="qr-container"></div>
 
     <div class="divider"></div>
 
-    <p class="qr-url" id="qr-url">https://YOUR-USERNAME.github.io/nikuv/</p>
-
     <button class="print-btn no-print" onclick="window.print()">הדפסה / Print</button>
   </div>
+
+  <script>
+    new QRCode(document.getElementById("qr-container"), {
+      text: "https://danielhadar.github.io/nikuv/",
+      width: 200,
+      height: 200,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  </script>
 
 </body>
 </html>

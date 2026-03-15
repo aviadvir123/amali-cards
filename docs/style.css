@@ -77,9 +77,9 @@ body {
 }
 
 .header-logo {
-  max-width: 60%;
+  max-width: 75%;
   height: auto;
-  max-height: 96px;
+  max-height: 120px;
   display: block;
   object-fit: contain;
   outline: 3px solid var(--brand-blue);

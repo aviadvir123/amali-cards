@@ -19,6 +19,20 @@ var MIN_QUANTITY = 1;
 var LOCALSTORAGE_KEY = "amali_punch_card";
 
 // ============================================================
+// PROMO CODE CONFIGURATION — Add gift codes here
+// Format: "CODE": amount_in_NIS
+// Example: "GIFT150": 150
+// ============================================================
+
+var PROMO_CODES = {
+  "GFT110": 110,
+  "GFT80": 80
+};
+
+// The localStorage key used to track redeemed promo codes.
+var PROMO_LOCALSTORAGE_KEY = "amali_used_promos";
+
+// ============================================================
 // SHAPE DEFINITIONS — 16 geometric shapes inspired by the brand
 // Each shape is defined relative to center (0,0) within ~34x34 box.
 // Parts can be 'circle' or 'path' SVG elements.
@@ -152,6 +166,28 @@ var celebrationCloseEl = document.getElementById("celebration-close");
 var cardSvgEl = document.querySelector(".card-svg");
 var slotGroups = []; // populated by renderSVGSlots
 
+// Tab elements
+var tabPunchEl = document.getElementById("tab-punch");
+var tabPromoEl = document.getElementById("tab-promo");
+var punchSectionEl = document.getElementById("punch-section");
+var promoSectionEl = document.getElementById("promo-section");
+
+// Promo elements
+var promoInputEl = document.getElementById("promo-input");
+var promoCheckBtnEl = document.getElementById("promo-check-btn");
+var promoStatusEl = document.getElementById("promo-status");
+var promoEntryEl = document.getElementById("promo-entry");
+var promoResultEl = document.getElementById("promo-result");
+var promoAmountEl = document.getElementById("promo-amount");
+var promoUseAmountEl = document.getElementById("promo-use-amount");
+var promoRedeemBtnEl = document.getElementById("promo-redeem-btn");
+var promoRedeemStatusEl = document.getElementById("promo-redeem-status");
+var promoRedeemedEl = document.getElementById("promo-redeemed");
+var promoRedeemedUsedEl = document.getElementById("promo-redeemed-used");
+var promoRemainingRowEl = document.getElementById("promo-remaining-row");
+var promoRemainingAmountEl = document.getElementById("promo-remaining-amount");
+var promoNewBtnEl = document.getElementById("promo-new-btn");
+
 // ============================================================
 // STATE
 // ============================================================
@@ -161,6 +197,8 @@ var quantity = 1;
 var toastTimer = null;
 var errorTimer = null;
 var isAnimating = false;
+
+var currentPromo = { code: null, amount: null };
 
 // ============================================================
 // SHAPE RENDERING
@@ -686,6 +724,209 @@ window.addEventListener("storage", function (e) {
     }
   }
 });
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+
+function switchTab(tab) {
+  if (tab === "punch") {
+    tabPunchEl.classList.add("tab-btn--active");
+    tabPromoEl.classList.remove("tab-btn--active");
+    punchSectionEl.classList.remove("hidden");
+    promoSectionEl.classList.add("hidden");
+  } else {
+    tabPromoEl.classList.add("tab-btn--active");
+    tabPunchEl.classList.remove("tab-btn--active");
+    promoSectionEl.classList.remove("hidden");
+    punchSectionEl.classList.add("hidden");
+  }
+}
+
+tabPunchEl.addEventListener("click", function () { switchTab("punch"); });
+tabPromoEl.addEventListener("click", function () { switchTab("promo"); });
+
+// ============================================================
+// PROMO CODE LOGIC
+// ============================================================
+
+function loadPromoData() {
+  try {
+    var raw = localStorage.getItem(PROMO_LOCALSTORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch (e) {
+    return {};
+  }
+}
+
+function getPromoRemaining(code) {
+  var data = loadPromoData();
+  if (data[code] !== undefined) {
+    return data[code].remaining;
+  }
+  return PROMO_CODES[code]; // never used yet — full amount
+}
+
+function savePromoRedemption(code, usedAmount) {
+  try {
+    var data = loadPromoData();
+    var current = data[code] || { remaining: PROMO_CODES[code], history: [] };
+    var newRemaining = current.remaining - usedAmount;
+    var today = new Date().toISOString().split("T")[0];
+    data[code] = {
+      remaining: newRemaining,
+      history: current.history.concat([{ used: usedAmount, date: today }])
+    };
+    localStorage.setItem(PROMO_LOCALSTORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function showPromoStatus(text, type) {
+  promoStatusEl.textContent = text;
+  promoStatusEl.className = "status-message " + type;
+}
+
+function clearPromoStatus() {
+  promoStatusEl.textContent = "";
+  promoStatusEl.className = "status-message hidden";
+}
+
+function showPromoRedeemStatus(text, type) {
+  promoRedeemStatusEl.textContent = text;
+  promoRedeemStatusEl.className = "status-message " + type;
+}
+
+function clearPromoRedeemStatus() {
+  promoRedeemStatusEl.textContent = "";
+  promoRedeemStatusEl.className = "status-message hidden";
+}
+
+function updatePromoCheckBtnState() {
+  promoCheckBtnEl.disabled = (promoInputEl.value.length === 0);
+}
+
+function updatePromoRedeemBtnState() {
+  var val = promoUseAmountEl.value.trim();
+  var num = parseFloat(val);
+  promoRedeemBtnEl.disabled = (!val || isNaN(num) || num <= 0);
+}
+
+function handlePromoCheck() {
+  var enteredCode = promoInputEl.value.trim().toUpperCase();
+  if (!enteredCode) return;
+
+  if (PROMO_CODES[enteredCode] === undefined) {
+    promoInputEl.classList.add("shake");
+    showPromoStatus("קוד לא תקף", "error");
+    promoInputEl.value = "";
+    updatePromoCheckBtnState();
+    return;
+  }
+
+  var remaining = getPromoRemaining(enteredCode);
+
+  if (remaining <= 0) {
+    promoInputEl.classList.add("shake");
+    showPromoStatus("כרטיס המתנה אזל", "error");
+    promoInputEl.value = "";
+    updatePromoCheckBtnState();
+    return;
+  }
+
+  currentPromo = { code: enteredCode, amount: remaining };
+  promoAmountEl.textContent = remaining + " ₪";
+  promoUseAmountEl.value = "";
+  promoUseAmountEl.max = remaining;
+  promoInputEl.value = "";
+  clearPromoStatus();
+  clearPromoRedeemStatus();
+  updatePromoRedeemBtnState();
+  promoEntryEl.classList.add("hidden");
+  promoResultEl.classList.remove("hidden");
+}
+
+function handlePromoRedeem() {
+  if (!currentPromo.code) return;
+
+  var useAmount = Math.round(parseFloat(promoUseAmountEl.value));
+
+  if (isNaN(useAmount) || useAmount <= 0) {
+    showPromoRedeemStatus("הכניסו סכום תקין", "error");
+    return;
+  }
+
+  if (useAmount > currentPromo.amount) {
+    showPromoRedeemStatus("הסכום גבוה מהיתרה (" + currentPromo.amount + " ₪)", "error");
+    return;
+  }
+
+  savePromoRedemption(currentPromo.code, useAmount);
+  var remaining = currentPromo.amount - useAmount;
+
+  promoRedeemedUsedEl.textContent = useAmount + " ₪";
+
+  if (remaining > 0) {
+    promoRemainingAmountEl.textContent = remaining + " ₪";
+    promoRemainingRowEl.classList.remove("hidden");
+  } else {
+    promoRemainingRowEl.classList.add("hidden");
+  }
+
+  currentPromo = { code: null, amount: null };
+  promoResultEl.classList.add("hidden");
+  promoRedeemedEl.classList.remove("hidden");
+}
+
+function resetPromoTab() {
+  currentPromo = { code: null, amount: null };
+  promoInputEl.value = "";
+  promoUseAmountEl.value = "";
+  clearPromoStatus();
+  clearPromoRedeemStatus();
+  promoEntryEl.classList.remove("hidden");
+  promoResultEl.classList.add("hidden");
+  promoRedeemedEl.classList.add("hidden");
+  updatePromoCheckBtnState();
+  updatePromoRedeemBtnState();
+}
+
+promoInputEl.addEventListener("input", function () {
+  updatePromoCheckBtnState();
+  if (promoStatusEl.classList.contains("error")) clearPromoStatus();
+});
+
+promoCheckBtnEl.addEventListener("click", function () {
+  if (!promoCheckBtnEl.disabled) handlePromoCheck();
+});
+
+promoInputEl.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && promoInputEl.value.length > 0) {
+    e.preventDefault();
+    handlePromoCheck();
+  }
+});
+
+promoInputEl.addEventListener("animationend", function () {
+  promoInputEl.classList.remove("shake");
+});
+
+promoUseAmountEl.addEventListener("input", function () {
+  updatePromoRedeemBtnState();
+  if (promoRedeemStatusEl.classList.contains("error")) clearPromoRedeemStatus();
+});
+
+promoUseAmountEl.addEventListener("keydown", function (e) {
+  if (e.key === "Enter" && !promoRedeemBtnEl.disabled) {
+    e.preventDefault();
+    handlePromoRedeem();
+  }
+});
+
+promoRedeemBtnEl.addEventListener("click", handlePromoRedeem);
+promoNewBtnEl.addEventListener("click", resetPromoTab);
 
 // ============================================================
 // INITIALIZATION

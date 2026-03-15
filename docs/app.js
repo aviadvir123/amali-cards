@@ -18,6 +18,9 @@ var MIN_QUANTITY = 1;
 // The localStorage key used to persist the punch card.
 var LOCALSTORAGE_KEY = "amali_punch_card";
 
+// The localStorage key used to persist the selected color theme.
+var THEME_KEY = "amali_theme";
+
 // ============================================================
 // PROMO CODE CONFIGURATION — Add gift codes here
 // Format: "CODE": amount_in_NIS
@@ -729,6 +732,36 @@ window.addEventListener("storage", function (e) {
     }
   }
 });
+
+// ============================================================
+// THEME SWITCHING
+// ============================================================
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  var dots = document.querySelectorAll(".theme-dot");
+  for (var i = 0; i < dots.length; i++) {
+    if (dots[i].getAttribute("data-theme") === theme) {
+      dots[i].classList.add("theme-dot--active");
+    } else {
+      dots[i].classList.remove("theme-dot--active");
+    }
+  }
+}
+
+(function () {
+  var dots = document.querySelectorAll(".theme-dot");
+  for (var i = 0; i < dots.length; i++) {
+    dots[i].addEventListener("click", function () {
+      var theme = this.getAttribute("data-theme");
+      applyTheme(theme);
+      try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+    });
+  }
+  var saved = "blue";
+  try { saved = localStorage.getItem(THEME_KEY) || "blue"; } catch (e) {}
+  applyTheme(saved);
+})();
 
 // ============================================================
 // TAB SWITCHING

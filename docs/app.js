@@ -25,8 +25,13 @@ var LOCALSTORAGE_KEY = "amali_punch_card";
 // ============================================================
 
 var PROMO_CODES = {
-  "GFT110": 110,
-  "GFT80": 80
+  "JOY50":    50,
+  "WARM80":   80,
+  "SMILE100": 100,
+  "TREAT120": 120,
+  "SHINE150": 150,
+  "CHEER180": 180,
+  "GOLD200":  200
 };
 
 // The localStorage key used to track redeemed promo codes.

@@ -19,13 +19,6 @@
   --font-stack: 'Alef', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Theme overrides */
-[data-theme="pink"]       { --brand-blue: rgb(183, 118, 108); }
-[data-theme="yellow"]     { --brand-blue: rgb(210, 168, 68);  }
-[data-theme="rose"]       { --brand-blue: rgb(196, 97, 110);  }
-[data-theme="terracotta"] { --brand-blue: rgb(205, 120, 95);  }
-[data-theme="periwinkle"] { --brand-blue: rgb(125, 128, 175); }
-
 /* ============================================================
    2. RESET / BASE
    ============================================================ */
@@ -356,31 +349,6 @@ body {
   border-top: 1px solid rgba(32, 80, 130, 0.12);
 }
 
-.theme-switcher {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.theme-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2.5px solid transparent;
-  cursor: pointer;
-  padding: 0;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-  outline: none;
-}
-
-.theme-dot:hover {
-  transform: scale(1.15);
-}
-
-.theme-dot--active {
-  border-color: rgba(0, 0, 0, 0.25);
-  transform: scale(1.2);
-}
 
 .social-links {
   display: flex;

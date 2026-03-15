@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#205082">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="עמלי">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <title>עמלי - כרטיס ניקוב</title>
+</head>
+<body>
+
+  <!-- localStorage unavailable error (hidden by default) -->
+  <div id="storage-error" class="storage-error hidden">
+    <p class="storage-error-he">הדפדפן לא תומך בשמירת נתונים. נסו לפתוח בדפדפן רגיל.</p>
+    <p class="storage-error-en">Your browser doesn't support data storage. Please use a regular browser.</p>
+  </div>
+
+  <!-- Main app container -->
+  <div id="app" class="app-container">
+
+    <!-- Header / Logo -->
+    <header class="header">
+      <img src="logo.png" alt="עמלי - Amali" class="header-logo">
+    </header>
+
+    <!-- Tab bar -->
+    <nav class="tab-bar">
+      <button type="button" id="tab-punch" class="tab-btn tab-btn--active">כרטיס ניקוב</button>
+      <button type="button" id="tab-promo" class="tab-btn">כרטיס מתנה</button>
+    </nav>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast hidden" aria-live="polite"></div>
+
+    <!-- Punch section -->
+    <div id="punch-section">
+
+      <!-- Punch card -->
+      <section class="card">
+        <div class="card-grid" dir="ltr">
+          <svg class="card-svg" viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg" aria-label="כרטיס ניקוב">
+            <!-- Slots generated dynamically by app.js -->
+          </svg>
+        </div>
+        <p class="card-progress" dir="ltr"><span id="progress-count">0</span> / 10</p>
+      </section>
+
+      <!-- Quantity selector -->
+      <section class="quantity-section">
+        <p class="quantity-label">כמה ניקובים?</p>
+        <div class="stepper" dir="ltr">
+          <button type="button" id="stepper-minus" class="stepper-btn stepper-minus" aria-label="הפחת ניקוב" disabled>-</button>
+          <span id="stepper-value" class="stepper-value" aria-live="polite">1</span>
+          <button type="button" id="stepper-plus" class="stepper-btn stepper-plus" aria-label="הוסף ניקוב">+</button>
+        </div>
+      </section>
+
+      <!-- Code entry -->
+      <section class="code-section">
+        <input
+          type="text"
+          id="code-input"
+          class="code-input"
+          dir="ltr"
+          inputmode="numeric"
+          placeholder="הזינו קוד"
+          aria-label="הזינו קוד"
+          autocomplete="off"
+        >
+        <button type="button" id="punch-btn" class="punch-btn" disabled>קדימה</button>
+        <div id="status-message" class="status-message hidden" role="status" aria-live="polite"></div>
+      </section>
+
+    </div>
+
+    <!-- Promo section -->
+    <div id="promo-section" class="hidden">
+
+      <!-- Entry state -->
+      <div id="promo-entry">
+        <section class="code-section promo-code-section">
+          <p class="quantity-label">הזינו קוד מתנה</p>
+          <input
+            type="text"
+            id="promo-input"
+            class="code-input"
+            dir="ltr"
+            inputmode="text"
+            placeholder="קוד מתנה"
+            aria-label="הזינו קוד מתנה"
+            autocomplete="off"
+          >
+          <button type="button" id="promo-check-btn" class="punch-btn" disabled>בדיקה</button>
+          <div id="promo-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <!-- Valid code result -->
+      <div id="promo-result" class="promo-result hidden">
+        <p class="promo-balance-label">יתרה</p>
+        <div class="promo-amount" id="promo-amount"></div>
+        <div class="promo-use-section">
+          <p class="quantity-label">כמה להשתמש? (₪)</p>
+          <input
+            type="number"
+            id="promo-use-amount"
+            class="code-input"
+            dir="ltr"
+            inputmode="numeric"
+            placeholder="סכום"
+            min="1"
+            autocomplete="off"
+          >
+        </div>
+        <button type="button" id="promo-redeem-btn" class="punch-btn promo-action-btn" disabled>מימוש</button>
+        <div id="promo-redeem-status" class="status-message hidden" role="status" aria-live="polite"></div>
+      </div>
+
+      <!-- Redeemed confirmation (barista sees this) -->
+      <div id="promo-redeemed" class="promo-redeemed hidden">
+        <div class="promo-confetti-wrap">
+          <div class="pgc pgc-diamond"></div>
+          <div class="pgc pgc-circle"></div>
+          <div class="pgc pgc-square"></div>
+          <div class="pgc pgc-diamond"></div>
+          <div class="pgc pgc-circle"></div>
+          <div class="pgc pgc-hexagon"></div>
+          <div class="pgc pgc-diamond"></div>
+          <div class="pgc pgc-circle"></div>
+          <div class="pgc pgc-square"></div>
+          <div class="pgc pgc-hexagon"></div>
+          <div class="pgc pgc-diamond"></div>
+          <div class="pgc pgc-circle"></div>
+        </div>
+        <div class="promo-check-icon">✓</div>
+        <div class="promo-redeemed-used" id="promo-redeemed-used"></div>
+        <p class="promo-redeemed-label">מומש בהצלחה</p>
+        <p class="promo-gift-tagline">כיף לקבל מתנה :)</p>
+        <div class="promo-remaining-row" id="promo-remaining-row">
+          <span class="promo-remaining-label">נותר בכרטיס:</span>
+          <span class="promo-remaining-amount" id="promo-remaining-amount"></span>
+        </div>
+        <button type="button" id="promo-new-btn" class="punch-btn promo-action-btn">מימוש נוסף</button>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="social-footer">
+        <div class="social-links">
+          <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="social-link" aria-label="Google Maps">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+          </a>
+          <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <circle cx="12" cy="12" r="4.5"/>
+              <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+          <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Celebration overlay (hidden by default) -->
+  <div id="celebration" class="celebration-overlay" role="dialog" aria-modal="true" aria-labelledby="celebration-title">
+    <div class="confetti-container">
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+    </div>
+    <div class="celebration-content">
+      <h2 id="celebration-title" class="celebration-line1">הקפה הזה על חשבוננו :)</h2>
+      <button type="button" id="celebration-close" class="celebration-close-btn">כרטיסיה חדשה</button>
+    </div>
+  </div>
+
+</body>
+</html>

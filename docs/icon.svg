@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <text x="256" y="280" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="180" font-weight="700" fill="rgb(32,80,130)">עמלי</text>
+  <!-- Small geometric shapes below the text -->
+  <polygon points="176,340 186,350 176,360 166,350" fill="rgb(32,80,130)" opacity="0.5"/>
+  <circle cx="206" cy="350" r="10" fill="rgb(32,80,130)" opacity="0.5"/>
+  <polygon points="236,340 246,345 246,355 236,360 226,355 226,345" fill="rgb(32,80,130)" opacity="0.5"/>
+  <polygon points="266,342 276,360 256,360" fill="rgb(32,80,130)" opacity="0.5"/>
+  <rect x="286" y="340" width="20" height="20" rx="2" fill="rgb(32,80,130)" opacity="0.5"/>
+  <polygon points="316,340 326,350 316,360 306,350" fill="rgb(32,80,130)" opacity="0.5"/>
+  <circle cx="346" cy="350" r="10" fill="rgb(32,80,130)" opacity="0.5"/>
+</svg>

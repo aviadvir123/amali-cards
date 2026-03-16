@@ -27,7 +27,8 @@ var LOCALSTORAGE_KEY = "amali_punch_card";
 
 var PROMO_CODES = {
   "DH180": 180,
-  "AMALI": 100
+  "AMALI": 100,
+  "AAA": 10
 };
 
 // The localStorage key used to track redeemed promo codes.

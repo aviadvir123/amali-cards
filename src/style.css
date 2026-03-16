@@ -953,6 +953,8 @@ body.celebration-active {
   border-radius: 8px;
   background: #0B2535;
   text-decoration: none;
+  color: #00E5D4;
+  -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s ease;
 }
 

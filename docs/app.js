@@ -1053,7 +1053,7 @@ promoNewBtnEl.addEventListener("click", function () {
     var step = isIOS
       ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן ואז \"הוסף למסך הבית\""
       : "לחצו על שלוש הנקודות ⋮ למעלה ואז \"הוסף למסך הבית\"";
-    textEl.innerHTML = "מומלץ להוריד את האפליקציה למסך הבית :)<br><br>" + step;
+    textEl.innerHTML = "מומלץ להוריד את האפליקציה למכשיר :)<br><br>" + step;
     btn.classList.remove("hidden");
 
     btn.addEventListener("click", function() {

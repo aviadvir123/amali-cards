@@ -941,7 +941,46 @@ body.celebration-active {
 }
 
 /* ============================================================
-   20. COMPLETIONS HISTORY
+   20. BIT FLOATING BUTTON
+   ============================================================ */
+
+.bit-fab {
+  position: fixed;
+  bottom: 24px;
+  left: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #0B2535;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+  z-index: 90;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bit-fab:hover,
+.bit-fab:focus-visible {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.bit-fab:active {
+  transform: scale(0.96);
+}
+
+.bit-fab-label {
+  font-family: var(--font-stack);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #00E5D4;
+}
+
+/* ============================================================
+   21. COMPLETIONS HISTORY
    ============================================================ */
 
 .completions-section {

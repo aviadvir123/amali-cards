@@ -4,7 +4,7 @@
 
 // Change this value to update the punch code for all customers.
 // Can be any string: "2552", "caffe", "Amali2026", "7", etc.
-var PUNCH_CODE = "2552";
+var PUNCH_CODE = "8525";
 
 // Change to "text" if PUNCH_CODE contains letters. "numeric" opens the number pad on mobile.
 var INPUT_MODE = "numeric";

@@ -941,54 +941,42 @@ body.celebration-active {
 }
 
 /* ============================================================
-   20. BIT FLOATING BUTTON
+   20. BIT FOOTER BUTTON
    ============================================================ */
 
-.bit-fab {
-  position: fixed;
-  bottom: 24px;
-  left: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: #0B2535;
+.bit-footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  width: 44px;
+  height: 30px;
+  border-radius: 8px;
+  background: #0B2535;
   text-decoration: none;
-  z-index: 90;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
-.bit-fab:hover,
-.bit-fab:focus-visible {
-  transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+.bit-footer:hover,
+.bit-footer:focus-visible {
+  opacity: 0.8;
 }
 
-.bit-fab:active {
-  transform: scale(0.96);
-}
-
-.bit-fab-label {
+.bit-footer-label {
   font-family: var(--font-stack);
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #00E5D4;
 }
 
-/* ============================================================
-   21. COMPLETIONS HISTORY
-   ============================================================ */
-
-.completions-section {
-  width: 100%;
-  margin-top: 4px;
-  margin-bottom: 20px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(32, 80, 130, 0.12);
+.social-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(32, 80, 130, 0.2);
 }
+
+/* ============================================================
+   21. COMPLETIONS HISTORY (removed)
+   ============================================================ */
 
 

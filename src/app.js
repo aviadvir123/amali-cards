@@ -42,8 +42,6 @@ var PROMO_LOCALSTORAGE_KEY = "amali_used_promos";
 // The localStorage key used to track the currently active promo code.
 var ACTIVE_PROMO_KEY = "amali_active_promo";
 
-// The localStorage key used to track completed punch cards.
-var COMPLETIONS_KEY = "amali_completions";
 
 // ============================================================
 // SHAPE DEFINITIONS — 16 geometric shapes inspired by the brand
@@ -203,7 +201,6 @@ var promoRemainingAmountEl = document.getElementById("promo-remaining-amount");
 var promoNewBtnEl = document.getElementById("promo-new-btn");
 var promoHistoryEl = document.getElementById("promo-history");
 var promoHistoryListEl = document.getElementById("promo-history-list");
-var completionsSectionEl = document.getElementById("completions-section");
 
 // ============================================================
 // STATE
@@ -554,55 +551,6 @@ function clearStatusMessage() {
 }
 
 // ============================================================
-// COMPLETIONS
-// ============================================================
-
-function loadCompletions() {
-  try {
-    var raw = localStorage.getItem(COMPLETIONS_KEY);
-    if (!raw) return [];
-    var parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed;
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveCompletion() {
-  try {
-    var list = loadCompletions();
-    var today = new Date().toISOString().split("T")[0];
-    list.push(today);
-    localStorage.setItem(COMPLETIONS_KEY, JSON.stringify(list));
-  } catch (e) {}
-}
-
-function renderCompletions() {
-  var list = loadCompletions();
-  var count = list.length;
-  if (count === 0) {
-    completionsSectionEl.classList.add("hidden");
-    return;
-  }
-
-  completionsSectionEl.classList.remove("hidden");
-
-  var rows = "";
-  for (var i = 0; i < list.length; i++) {
-    rows +=
-      '<div class="promo-history-row">' +
-        '<span class="promo-history-code">כרטיסיה #' + (i + 1) + '</span>' +
-        '<span class="promo-history-info">' + list[i] + '</span>' +
-      '</div>';
-  }
-
-  completionsSectionEl.innerHTML =
-    '<p class="promo-history-title">כרטיסיות שהושלמו</p>' +
-    rows;
-}
-
-// ============================================================
 // CELEBRATION
 // ============================================================
 
@@ -635,10 +583,6 @@ function dismissCelebration() {
   setTimeout(function () {
     document.body.classList.remove("celebration-active");
     appEl.removeAttribute("aria-hidden");
-
-    // Save completion to history
-    saveCompletion();
-    renderCompletions();
 
     // Generate new shapes for the new card
     var newIndices = generateShapeIndices();
@@ -1094,7 +1038,6 @@ promoNewBtnEl.addEventListener("click", function () {
   // Initial render
   render();
   updatePunchButtonState();
-  renderCompletions();
 
   // Save state if shapes were newly generated (first load or migration)
   saveState(state);

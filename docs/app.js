@@ -25,9 +25,7 @@ var LOCALSTORAGE_KEY = "amali_punch_card";
 // Example: "GIFT150": 150
 // ============================================================
 
-var PROMO_CODES = {
-  "DANIELH100": 100
-};
+var PROMO_CODES = {};
 
 // The localStorage key used to track redeemed promo codes.
 var PROMO_LOCALSTORAGE_KEY = "amali_used_promos";

@@ -1051,8 +1051,8 @@ promoNewBtnEl.addEventListener("click", function () {
     var closeBtn = document.getElementById("a2hs-popup-close");
 
     var step = isIOS
-      ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן ואז \"הוסף למסך הבית\""
-      : "לחצו על שלוש הנקודות ⋮ למעלה ואז \"הוסף למסך הבית\"";
+      ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן ואז \"הוסף למסך הבית\" ו\"התקן\""
+      : "לחצו על שלוש הנקודות ⋮ למעלה ואז \"הוסף למסך הבית\" ו\"התקן\"";
     textEl.innerHTML = "מומלץ להוריד את האפליקציה למכשיר :)<br><br>" + step;
     btn.classList.remove("hidden");
 

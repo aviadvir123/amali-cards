@@ -26,7 +26,7 @@ var LOCALSTORAGE_KEY = "amali_punch_card";
 // ============================================================
 
 var PROMO_CODES = {
-  "DANIELH100": 100
+  "DH180": 180
 };
 
 // The localStorage key used to track redeemed promo codes.
@@ -1034,35 +1034,6 @@ promoNewBtnEl.addEventListener("click", function () {
 
   // Save state if shapes were newly generated (first load or migration)
   saveState(state);
-
-  // Add to home screen hint
-  (function() {
-    var isStandalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
-    var dismissed = localStorage.getItem("amali_a2hs_dismissed");
-    if (isStandalone || dismissed) return;
-
-    var ua = navigator.userAgent;
-    var isIOS = /iPhone|iPad|iPod/.test(ua);
-    var isAndroid = /Android/.test(ua);
-    if (!isIOS && !isAndroid) return;
-
-    var hintEl = document.getElementById("a2hs-hint");
-    var textEl = document.getElementById("a2hs-text");
-    var closeEl = document.getElementById("a2hs-close");
-
-    if (isIOS) {
-      textEl.textContent = "הוסיפו אותנו למסך הבית — לחצו על כפתור השיתוף ואז \"הוסף למסך הבית\"";
-    } else {
-      textEl.textContent = "הוסיפו אותנו למסך הבית — לחצו על תפריט שלוש הנקודות ואז \"הוסף למסך הבית\"";
-    }
-
-    hintEl.classList.remove("hidden");
-
-    closeEl.addEventListener("click", function() {
-      hintEl.classList.add("hidden");
-      try { localStorage.setItem("amali_a2hs_dismissed", "1"); } catch(e) {}
-    });
-  })();
 
   // Check for pending celebration
   if (state.celebrationPending) {

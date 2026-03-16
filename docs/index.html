@@ -107,7 +107,7 @@
 
       <!-- Valid code result -->
       <div id="promo-result" class="promo-result hidden">
-        <p class="promo-balance-label">יתרה</p>
+        <p class="promo-balance-label">יתרה — <span id="promo-active-code-name"></span></p>
         <div class="promo-amount" id="promo-amount"></div>
         <div class="promo-use-section">
           <p class="quantity-label">כמה להשתמש? (₪)</p>
@@ -151,6 +151,12 @@
           <span class="promo-remaining-amount" id="promo-remaining-amount"></span>
         </div>
         <button type="button" id="promo-new-btn" class="punch-btn promo-action-btn">מימוש נוסף</button>
+      </div>
+
+      <!-- History: fully used codes -->
+      <div id="promo-history" class="promo-history hidden">
+        <p class="promo-history-title">נוצל במלואו</p>
+        <div id="promo-history-list"></div>
       </div>
 
     </div>

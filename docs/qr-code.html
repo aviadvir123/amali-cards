@@ -9,164 +9,144 @@
   <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Alef', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      font-family: 'Alef', -apple-system, sans-serif;
+      background: #F0F0F0;
       min-height: 100vh;
-      background: #F5F5F5;
-    }
-
-    .qr-card {
-      background: #FFFFFF;
-      border-radius: 20px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
-      padding: 48px 40px 52px;
-      text-align: center;
-      max-width: 340px;
-      width: 100%;
-    }
-
-    .shop-name {
-      font-size: 2.42rem;
-      font-weight: 700;
-      color: rgb(32, 80, 130);
-      margin-bottom: 6px;
-    }
-
-    .shop-subtitle {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: rgb(32, 80, 130);
-      letter-spacing: 0.12em;
-      opacity: 0.7;
-    }
-
-    .divider {
-      width: 48px;
-      height: 2px;
-      background: rgba(32, 80, 130, 0.2);
-      margin: 28px auto;
-    }
-
-    .qr-title {
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: rgb(32, 80, 130);
-      margin-bottom: 6px;
-    }
-
-    .qr-subtitle {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: rgb(32, 80, 130);
-      opacity: 0.65;
-      margin-bottom: 28px;
-    }
-
-    #qr-container {
       display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* ── Ticket shell ───────────────────────────────────── */
+    .ticket {
+      display: flex;
+      flex-direction: row;
+      direction: ltr;
+      width: 680px;
+      height: 240px;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 6px 32px rgba(0, 0, 0, 0.13);
+    }
+
+    /* ── Left: branded panel ────────────────────────────── */
+    .ticket-brand {
+      width: 230px;
+      flex-shrink: 0;
+      padding: 28px;
+      display: flex;
+      align-items: center;
       justify-content: center;
     }
 
-    #qr-container canvas,
+    .brand-logo {
+      max-width: 100%;
+      max-height: 100px;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* ── Dashed separator ───────────────────────────────── */
+    .ticket-sep {
+      width: 1px;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(32, 80, 130, 0.2) 0px,
+        rgba(32, 80, 130, 0.2) 6px,
+        transparent 6px,
+        transparent 12px
+      );
+      margin: 0;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    /* Notch circles at top and bottom of separator */
+    .ticket-sep::before,
+    .ticket-sep::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #F0F0F0;
+    }
+    .ticket-sep::before { top: -10px; }
+    .ticket-sep::after  { bottom: -10px; }
+
+    /* ── Right: QR panel ────────────────────────────────── */
+    .ticket-qr {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px 32px;
+    }
+
+#qr-container canvas,
     #qr-container img {
-      border-radius: 10px;
+      border-radius: 8px;
+      display: block;
     }
 
-    .qr-social {
-      margin-top: 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      border-top: 1px solid rgba(32, 80, 130, 0.12);
-      padding-top: 16px;
-    }
-
-.qr-social-links {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-
-    .qr-social-link {
-      color: rgb(32, 80, 130);
-      opacity: 0.35;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .qr-social-link:hover {
-      opacity: 0.75;
-    }
-
+    /* ── Print ──────────────────────────────────────────── */
     @media print {
+      @page { size: 20cm 8cm; margin: 0; }
+
       body {
-        background: #FFFFFF;
+        background: #fff;
         min-height: auto;
+        padding: 0;
+        display: block;
       }
 
-      .qr-card {
+      .ticket {
+        width: 20cm;
+        height: 8cm;
+        border-radius: 0;
         box-shadow: none;
-        border: 2px solid rgb(32, 80, 130);
-        max-width: none;
-        width: 10cm;
-        padding: 1.5cm 1.2cm;
-        border-radius: 10px;
+      }
+
+      .ticket-sep::before,
+      .ticket-sep::after {
+        background: #fff;
       }
     }
   </style>
 </head>
 <body>
 
-  <div class="qr-card">
-    <h1 class="shop-name">עמלי</h1>
-    <p class="shop-subtitle">عملي &nbsp;·&nbsp; Amali</p>
+  <div class="ticket">
 
-    <div class="divider"></div>
-
-    <p class="qr-title">כרטיס ניקוב דיגיטלי</p>
-    <p class="qr-subtitle">קפה עשירי חינם :)</p>
-
-    <div id="qr-container"></div>
-
-    <div class="qr-social">
-      <div class="qr-social-links">
-        <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" aria-label="Google Maps" class="qr-social-link">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-          </svg>
-        </a>
-        <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" aria-label="Instagram" class="qr-social-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-            <circle cx="12" cy="12" r="4.5"/>
-            <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
-          </svg>
-        </a>
-        <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" aria-label="Facebook" class="qr-social-link">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-          </svg>
-        </a>
-      </div>
+    <!-- Left: brand -->
+    <div class="ticket-brand">
+      <img src="logo.svg" alt="עמלי" class="brand-logo">
     </div>
+
+    <!-- Separator -->
+    <div class="ticket-sep"></div>
+
+    <!-- Right: QR -->
+    <div class="ticket-qr">
+      <div id="qr-container"></div>
+    </div>
+
   </div>
 
   <script>
     new QRCode(document.getElementById("qr-container"), {
       text: "https://aviadvir123.github.io/amali-cards/",
-      width: 220,
-      height: 220,
+      width: 160,
+      height: 160,
       colorDark: "#000000",
       colorLight: "#ffffff",
       correctLevel: QRCode.CorrectLevel.H

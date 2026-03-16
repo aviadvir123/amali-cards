@@ -26,7 +26,6 @@ var LOCALSTORAGE_KEY = "amali_punch_card";
 // ============================================================
 
 var PROMO_CODES = {
-  "SHINE150": 150,
   "CHEER180": 180,
   "GOLD200": 200,
   "DANIELH100": 100

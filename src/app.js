@@ -39,6 +39,12 @@ var PROMO_CODES = {
 // The localStorage key used to track redeemed promo codes.
 var PROMO_LOCALSTORAGE_KEY = "amali_used_promos";
 
+// The localStorage key used to track the currently active promo code.
+var ACTIVE_PROMO_KEY = "amali_active_promo";
+
+// The localStorage key used to track completed punch cards.
+var COMPLETIONS_KEY = "amali_completions";
+
 // ============================================================
 // SHAPE DEFINITIONS — 16 geometric shapes inspired by the brand
 // Each shape is defined relative to center (0,0) within ~34x34 box.
@@ -186,6 +192,7 @@ var promoStatusEl = document.getElementById("promo-status");
 var promoEntryEl = document.getElementById("promo-entry");
 var promoResultEl = document.getElementById("promo-result");
 var promoAmountEl = document.getElementById("promo-amount");
+var promoActiveCodeNameEl = document.getElementById("promo-active-code-name");
 var promoUseAmountEl = document.getElementById("promo-use-amount");
 var promoRedeemBtnEl = document.getElementById("promo-redeem-btn");
 var promoRedeemStatusEl = document.getElementById("promo-redeem-status");
@@ -194,6 +201,9 @@ var promoRedeemedUsedEl = document.getElementById("promo-redeemed-used");
 var promoRemainingRowEl = document.getElementById("promo-remaining-row");
 var promoRemainingAmountEl = document.getElementById("promo-remaining-amount");
 var promoNewBtnEl = document.getElementById("promo-new-btn");
+var promoHistoryEl = document.getElementById("promo-history");
+var promoHistoryListEl = document.getElementById("promo-history-list");
+var completionsSectionEl = document.getElementById("completions-section");
 
 // ============================================================
 // STATE
@@ -544,6 +554,55 @@ function clearStatusMessage() {
 }
 
 // ============================================================
+// COMPLETIONS
+// ============================================================
+
+function loadCompletions() {
+  try {
+    var raw = localStorage.getItem(COMPLETIONS_KEY);
+    if (!raw) return [];
+    var parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCompletion() {
+  try {
+    var list = loadCompletions();
+    var today = new Date().toISOString().split("T")[0];
+    list.push(today);
+    localStorage.setItem(COMPLETIONS_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+
+function renderCompletions() {
+  var list = loadCompletions();
+  var count = list.length;
+  if (count === 0) {
+    completionsSectionEl.classList.add("hidden");
+    return;
+  }
+
+  completionsSectionEl.classList.remove("hidden");
+
+  var rows = "";
+  for (var i = 0; i < list.length; i++) {
+    rows +=
+      '<div class="promo-history-row">' +
+        '<span class="promo-history-code">כרטיסיה #' + (i + 1) + '</span>' +
+        '<span class="promo-history-info">' + list[i] + '</span>' +
+      '</div>';
+  }
+
+  completionsSectionEl.innerHTML =
+    '<p class="promo-history-title">כרטיסיות שהושלמו</p>' +
+    rows;
+}
+
+// ============================================================
 // CELEBRATION
 // ============================================================
 
@@ -576,6 +635,10 @@ function dismissCelebration() {
   setTimeout(function () {
     document.body.classList.remove("celebration-active");
     appEl.removeAttribute("aria-hidden");
+
+    // Save completion to history
+    saveCompletion();
+    renderCompletions();
 
     // Generate new shapes for the new card
     var newIndices = generateShapeIndices();
@@ -747,6 +810,12 @@ function switchTab(tab) {
     tabPunchEl.classList.remove("tab-btn--active");
     promoSectionEl.classList.remove("hidden");
     punchSectionEl.classList.add("hidden");
+    // Restore active code if entry form is showing
+    var activeCode = getActivePromo();
+    if (activeCode && !promoEntryEl.classList.contains("hidden")) {
+      showActiveCode(activeCode);
+    }
+    renderPromoHistory();
   }
 }
 
@@ -756,6 +825,16 @@ tabPromoEl.addEventListener("click", function () { switchTab("promo"); });
 // ============================================================
 // PROMO CODE LOGIC
 // ============================================================
+
+function getActivePromo() {
+  try { return localStorage.getItem(ACTIVE_PROMO_KEY) || null; } catch(e) { return null; }
+}
+function setActivePromo(code) {
+  try { localStorage.setItem(ACTIVE_PROMO_KEY, code); } catch(e) {}
+}
+function clearActivePromo() {
+  try { localStorage.removeItem(ACTIVE_PROMO_KEY); } catch(e) {}
+}
 
 function loadPromoData() {
   try {
@@ -821,6 +900,51 @@ function updatePromoRedeemBtnState() {
   promoRedeemBtnEl.disabled = (!val || isNaN(num) || num <= 0);
 }
 
+function showActiveCode(code) {
+  var remaining = getPromoRemaining(code);
+  if (remaining <= 0) {
+    clearActivePromo();
+    resetPromoTab();
+    return;
+  }
+  currentPromo = { code: code, amount: remaining };
+  promoAmountEl.textContent = remaining + " ₪";
+  promoActiveCodeNameEl.textContent = code;
+  promoUseAmountEl.value = "";
+  promoUseAmountEl.max = remaining;
+  clearPromoRedeemStatus();
+  updatePromoRedeemBtnState();
+  promoEntryEl.classList.add("hidden");
+  promoResultEl.classList.remove("hidden");
+  promoRedeemedEl.classList.add("hidden");
+}
+
+function renderPromoHistory() {
+  var data = loadPromoData();
+  var fullyUsed = [];
+  Object.keys(data).forEach(function(code) {
+    if (data[code].remaining === 0) {
+      fullyUsed.push({ code: code, history: data[code].history });
+    }
+  });
+  if (fullyUsed.length === 0) {
+    promoHistoryEl.classList.add("hidden");
+    return;
+  }
+  promoHistoryEl.classList.remove("hidden");
+  promoHistoryListEl.innerHTML = "";
+  fullyUsed.forEach(function(item) {
+    var total = item.history.reduce(function(sum, h) { return sum + h.used; }, 0);
+    var lastDate = item.history.length > 0 ? item.history[item.history.length - 1].date : "";
+    var row = document.createElement("div");
+    row.className = "promo-history-row";
+    row.innerHTML =
+      '<span class="promo-history-code">' + item.code + '</span>' +
+      '<span class="promo-history-info">' + total + ' ₪ · ' + lastDate + '</span>';
+    promoHistoryListEl.appendChild(row);
+  });
+}
+
 function handlePromoCheck() {
   var enteredCode = promoInputEl.value.trim().toUpperCase();
   if (!enteredCode) return;
@@ -843,16 +967,10 @@ function handlePromoCheck() {
     return;
   }
 
-  currentPromo = { code: enteredCode, amount: remaining };
-  promoAmountEl.textContent = remaining + " ₪";
-  promoUseAmountEl.value = "";
-  promoUseAmountEl.max = remaining;
+  setActivePromo(enteredCode);
   promoInputEl.value = "";
   clearPromoStatus();
-  clearPromoRedeemStatus();
-  updatePromoRedeemBtnState();
-  promoEntryEl.classList.add("hidden");
-  promoResultEl.classList.remove("hidden");
+  showActiveCode(enteredCode);
 }
 
 function handlePromoRedeem() {
@@ -870,7 +988,8 @@ function handlePromoRedeem() {
     return;
   }
 
-  savePromoRedemption(currentPromo.code, useAmount);
+  var redeemedCode = currentPromo.code;
+  savePromoRedemption(redeemedCode, useAmount);
   var remaining = currentPromo.amount - useAmount;
 
   promoRedeemedUsedEl.textContent = useAmount + " ₪";
@@ -878,16 +997,22 @@ function handlePromoRedeem() {
   if (remaining > 0) {
     promoRemainingAmountEl.textContent = remaining + " ₪";
     promoRemainingRowEl.classList.remove("hidden");
+    promoNewBtnEl.textContent = "מימוש נוסף";
+    currentPromo.amount = remaining;
   } else {
     promoRemainingRowEl.classList.add("hidden");
+    promoNewBtnEl.textContent = "סגור";
+    clearActivePromo();
+    currentPromo = { code: null, amount: null };
+    renderPromoHistory();
   }
 
-  currentPromo = { code: null, amount: null };
   promoResultEl.classList.add("hidden");
   promoRedeemedEl.classList.remove("hidden");
 }
 
 function resetPromoTab() {
+  clearActivePromo();
   currentPromo = { code: null, amount: null };
   promoInputEl.value = "";
   promoUseAmountEl.value = "";
@@ -898,6 +1023,7 @@ function resetPromoTab() {
   promoRedeemedEl.classList.add("hidden");
   updatePromoCheckBtnState();
   updatePromoRedeemBtnState();
+  renderPromoHistory();
 }
 
 promoInputEl.addEventListener("input", function () {
@@ -933,7 +1059,16 @@ promoUseAmountEl.addEventListener("keydown", function (e) {
 });
 
 promoRedeemBtnEl.addEventListener("click", handlePromoRedeem);
-promoNewBtnEl.addEventListener("click", resetPromoTab);
+
+promoNewBtnEl.addEventListener("click", function () {
+  promoRedeemedEl.classList.add("hidden");
+  var activeCode = getActivePromo();
+  if (activeCode) {
+    showActiveCode(activeCode);
+  } else {
+    resetPromoTab();
+  }
+});
 
 // ============================================================
 // INITIALIZATION
@@ -959,6 +1094,7 @@ promoNewBtnEl.addEventListener("click", resetPromoTab);
   // Initial render
   render();
   updatePunchButtonState();
+  renderCompletions();
 
   // Save state if shapes were newly generated (first load or migration)
   saveState(state);

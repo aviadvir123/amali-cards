@@ -68,7 +68,7 @@
       <!-- Code entry -->
       <section class="code-section">
         <input
-          type="text"
+          type="password"
           id="code-input"
           class="code-input"
           dir="ltr"
@@ -80,6 +80,9 @@
         <button type="button" id="punch-btn" class="punch-btn" disabled>קדימה</button>
         <div id="status-message" class="status-message hidden" role="status" aria-live="polite"></div>
       </section>
+
+      <!-- Completions history -->
+      <div id="completions-section" class="completions-section hidden"></div>
 
     </div>
 
@@ -165,19 +168,19 @@
     <footer class="footer">
       <div class="social-footer">
         <div class="social-links">
-          <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="social-link" aria-label="Google Maps">
+          <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="social-link social-link--maps" aria-label="Google Maps">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
             </svg>
           </a>
-          <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link" aria-label="Instagram">
+          <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link social-link--instagram" aria-label="Instagram">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
               <circle cx="12" cy="12" r="4.5"/>
               <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
             </svg>
           </a>
-          <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link" aria-label="Facebook">
+          <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link social-link--facebook" aria-label="Facebook">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
             </svg>

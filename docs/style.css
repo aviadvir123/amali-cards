@@ -358,7 +358,7 @@ body {
 
 .social-link {
   color: var(--brand-blue);
-  opacity: 0.35;
+  opacity: 0.6;
   transition: opacity 0.15s ease;
   display: flex;
   align-items: center;
@@ -367,9 +367,13 @@ body {
   height: 30px;
 }
 
+.social-link--maps     { color: #EA4335; }
+.social-link--instagram { color: #E1306C; }
+.social-link--facebook  { color: #1877F2; }
+
 .social-link:hover,
 .social-link:focus-visible {
-  opacity: 0.75;
+  opacity: 1;
 }
 
 .social-link svg {
@@ -935,3 +939,17 @@ body.celebration-active {
   color: var(--gray-dark);
   line-height: 1.5;
 }
+
+/* ============================================================
+   20. COMPLETIONS HISTORY
+   ============================================================ */
+
+.completions-section {
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(32, 80, 130, 0.12);
+}
+
+

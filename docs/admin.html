@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>עמלי - ניהול כרטיסי מתנה</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue: rgb(32, 80, 130);
+      --green: #27AE60;
+      --red: #C0392B;
+      --bg: #F5F5F5;
+      --white: #FFFFFF;
+      --font: 'Alef', -apple-system, sans-serif;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: var(--font); font-size: 16px; font-weight: 700; }
+
+    body {
+      background: var(--bg);
+      color: var(--blue);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 40px;
+    }
+
+    .header {
+      width: 100%;
+      background: var(--blue);
+      color: white;
+      padding: 16px 20px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 2px solid var(--blue);
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      margin-bottom: 14px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="password"] {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 2px solid rgba(32, 80, 130, 0.3);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: var(--font);
+      color: var(--blue);
+      background: var(--white);
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    input:focus { border-color: var(--blue); }
+
+    .btn {
+      width: 100%;
+      height: 48px;
+      border: none;
+      border-radius: 8px;
+      background: var(--blue);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn:active:not(:disabled) { opacity: 0.85; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--blue);
+      border: 2px solid var(--blue);
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    .btn-delete {
+      background: var(--red);
+      width: auto;
+      height: 34px;
+      padding: 0 14px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      text-align: center;
+      min-height: 1.4em;
+      font-weight: 700;
+    }
+    .status.success { color: var(--green); }
+    .status.error   { color: var(--red); }
+
+    .codes-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .code-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: rgba(32, 80, 130, 0.05);
+      border-radius: 8px;
+    }
+
+    .code-name   { font-size: 1rem; letter-spacing: 0.05em; }
+    .code-amount { font-size: 1rem; opacity: 0.65; margin-left: 12px; }
+
+    .code-right { display: flex; align-items: center; gap: 10px; }
+
+    .placeholder {
+      text-align: center;
+      padding: 16px;
+      opacity: 0.45;
+      font-size: 0.9rem;
+    }
+
+    .connected-label { color: var(--green); font-size: 0.95rem; }
+
+    .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .input-row input { margin-bottom: 0; }
+    .input-code   { flex: 1; direction: ltr; }
+    .input-amount { width: 110px; flex-shrink: 0; direction: ltr; }
+
+    .token-hint {
+      font-size: 0.75rem;
+      opacity: 0.45;
+      text-align: center;
+      margin-top: 8px;
+      font-weight: 400;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="header">ניהול כרטיסי מתנה — עמלי</div>
+
+  <div class="container">
+
+    <!-- Token / connection -->
+    <div class="card">
+      <p class="card-title">חיבור</p>
+      <div id="token-form">
+        <input type="password" id="token-input" placeholder="GitHub Personal Access Token" dir="ltr" autocomplete="off">
+        <button class="btn" id="connect-btn">התחבר</button>
+        <p class="token-hint">הטוקן נשמר רק במכשיר זה ולא נשלח לשום מקום</p>
+      </div>
+      <div id="token-connected" class="hidden">
+        <p class="connected-label">מחובר</p>
+        <button class="btn btn-outline" id="disconnect-btn">החלף טוקן</button>
+      </div>
+    </div>
+
+    <!-- Current codes list -->
+    <div class="card">
+      <p class="card-title">קודים פעילים</p>
+      <div id="codes-list" class="codes-list">
+        <div class="placeholder">הזן טוקן כדי לטעון קודים</div>
+      </div>
+    </div>
+
+    <!-- Add new code -->
+    <div class="card">
+      <p class="card-title">הוספת קוד חדש</p>
+      <div class="input-row">
+        <input type="text"   id="new-code"   class="input-code"   placeholder="שם הקוד" dir="ltr" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+        <input type="number" id="new-amount" class="input-amount" placeholder="₪" min="1" dir="ltr">
+      </div>
+      <button class="btn" id="add-btn" disabled>הוסף</button>
+      <div class="status" id="add-status"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var REPO      = 'aviadvir123/amali-cards';
+    var FILE_PATH = 'docs/app.js';
+    var TOKEN_KEY = 'amali_admin_token';
+
+    var tokenInput     = document.getElementById('token-input');
+    var connectBtn     = document.getElementById('connect-btn');
+    var disconnectBtn  = document.getElementById('disconnect-btn');
+    var tokenForm      = document.getElementById('token-form');
+    var tokenConnected = document.getElementById('token-connected');
+    var codesList      = document.getElementById('codes-list');
+    var newCodeInput   = document.getElementById('new-code');
+    var newAmountInput = document.getElementById('new-amount');
+    var addBtn         = document.getElementById('add-btn');
+    var addStatus      = document.getElementById('add-status');
+
+    var currentSha     = null;
+    var currentContent = null;
+    var currentCodes   = {};
+
+    // ── Storage helpers ──────────────────────────────────────
+    function getToken()    { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch(e) { return ''; } }
+    function saveToken(t)  { try { localStorage.setItem(TOKEN_KEY, t); } catch(e) {} }
+    function clearToken()  { try { localStorage.removeItem(TOKEN_KEY); } catch(e) {} }
+
+    // ── Status ───────────────────────────────────────────────
+    function showStatus(msg, type) {
+      addStatus.textContent = msg;
+      addStatus.className = 'status ' + (type || '');
+    }
+
+    // ── Parse / build PROMO_CODES block ──────────────────────
+    function parseCodes(content) {
+      var match = content.match(/var PROMO_CODES = \{([\s\S]*?)\};/);
+      if (!match) return {};
+      var codes = {};
+      var lines = match[1].split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        var m = lines[i].match(/"([^"]+)":\s*(\d+)/);
+        if (m) codes[m[1]] = parseInt(m[2]);
+      }
+      return codes;
+    }
+
+    function buildCodesBlock(codes) {
+      var keys = Object.keys(codes);
+      if (keys.length === 0) return 'var PROMO_CODES = {};';
+      var lines = keys.map(function(k) { return '  "' + k + '": ' + codes[k]; });
+      return 'var PROMO_CODES = {\n' + lines.join(',\n') + '\n};';
+    }
+
+    // ── Render codes list ────────────────────────────────────
+    function renderCodes() {
+      var keys = Object.keys(currentCodes);
+      if (keys.length === 0) {
+        codesList.innerHTML = '<div class="placeholder">אין קודים פעילים</div>';
+        return;
+      }
+      codesList.innerHTML = '';
+      keys.forEach(function(key) {
+        var row = document.createElement('div');
+        row.className = 'code-row';
+        row.innerHTML =
+          '<span class="code-name">' + key + '</span>' +
+          '<div class="code-right">' +
+            '<span class="code-amount">' + currentCodes[key] + ' ₪</span>' +
+            '<button class="btn btn-delete" data-code="' + key + '">מחק</button>' +
+          '</div>';
+        codesList.appendChild(row);
+      });
+      codesList.querySelectorAll('.btn-delete').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          if (confirm('למחוק את הקוד ' + this.getAttribute('data-code') + '?')) {
+            deleteCode(this.getAttribute('data-code'));
+          }
+        });
+      });
+    }
+
+    // ── Fetch file from GitHub ───────────────────────────────
+    function fetchFile() {
+      var token = getToken();
+      if (!token) return;
+      codesList.innerHTML = '<div class="placeholder">טוען...</div>';
+
+      fetch('https://api.github.com/repos/' + REPO + '/contents/' + FILE_PATH, {
+        headers: {
+          'Authorization': 'token ' + token,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.message) {
+          codesList.innerHTML = '<div class="placeholder" style="color:var(--red)">' + data.message + '</div>';
+          return;
+        }
+        currentSha     = data.sha;
+        currentContent = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+        currentCodes   = parseCodes(currentContent);
+        renderCodes();
+      })
+      .catch(function() {
+        codesList.innerHTML = '<div class="placeholder" style="color:var(--red)">שגיאת חיבור</div>';
+      });
+    }
+
+    // ── Save file to GitHub ──────────────────────────────────
+    function saveFile(newCodes, successMsg) {
+      var token      = getToken();
+      var newBlock   = buildCodesBlock(newCodes);
+      var newContent = currentContent.replace(/var PROMO_CODES = \{[\s\S]*?\};/, newBlock);
+      var encoded    = btoa(unescape(encodeURIComponent(newContent)));
+
+      addBtn.disabled = true;
+      showStatus('שומר...', '');
+
+      fetch('https://api.github.com/repos/' + REPO + '/contents/' + FILE_PATH, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token ' + token,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: 'Update promo codes via admin',
+          content: encoded,
+          sha: currentSha,
+          branch: 'main'
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.content && data.content.sha) {
+          currentSha     = data.content.sha;
+          currentContent = newContent;
+          currentCodes   = newCodes;
+          renderCodes();
+          showStatus(successMsg || 'נשמר בהצלחה', 'success');
+          newCodeInput.value  = '';
+          newAmountInput.value = '';
+          updateAddBtnState();
+        } else {
+          showStatus('שגיאה בשמירה', 'error');
+        }
+        addBtn.disabled = false;
+      })
+      .catch(function() {
+        showStatus('שגיאת חיבור', 'error');
+        addBtn.disabled = false;
+      });
+    }
+
+    // ── Add / delete ─────────────────────────────────────────
+    function addCode() {
+      var code   = newCodeInput.value.trim().toUpperCase();
+      var amount = parseInt(newAmountInput.value);
+      if (!code || isNaN(amount) || amount <= 0) return;
+      if (currentCodes[code] !== undefined) { showStatus('קוד זה כבר קיים', 'error'); return; }
+      var newCodes = Object.assign({}, currentCodes);
+      newCodes[code] = amount;
+      saveFile(newCodes, 'קוד ' + code + ' נוסף');
+    }
+
+    function deleteCode(code) {
+      var newCodes = Object.assign({}, currentCodes);
+      delete newCodes[code];
+      saveFile(newCodes, 'קוד ' + code + ' נמחק');
+    }
+
+    // ── Button state ──────────────────────────────────────────
+    function updateAddBtnState() {
+      var code   = newCodeInput.value.trim();
+      var amount = newAmountInput.value.trim();
+      addBtn.disabled = (!code || !amount || parseInt(amount) <= 0 || !getToken());
+    }
+
+    // ── Token flow ────────────────────────────────────────────
+    function showConnected() {
+      tokenForm.classList.add('hidden');
+      tokenConnected.classList.remove('hidden');
+      fetchFile();
+    }
+
+    function showTokenForm() {
+      tokenConnected.classList.add('hidden');
+      tokenForm.classList.remove('hidden');
+      codesList.innerHTML = '<div class="placeholder">הזן טוקן כדי לטעון קודים</div>';
+    }
+
+    connectBtn.addEventListener('click', function() {
+      var t = tokenInput.value.trim();
+      if (!t) return;
+      saveToken(t);
+      tokenInput.value = '';
+      showConnected();
+    });
+
+    disconnectBtn.addEventListener('click', function() {
+      clearToken();
+      currentSha = null; currentContent = null; currentCodes = {};
+      showTokenForm();
+    });
+
+    // ── Form events ───────────────────────────────────────────
+    addBtn.addEventListener('click', addCode);
+    newCodeInput.addEventListener('input', updateAddBtnState);
+    newAmountInput.addEventListener('input', updateAddBtnState);
+
+    newCodeInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') newAmountInput.focus();
+    });
+    newAmountInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !addBtn.disabled) addCode();
+    });
+
+    tokenInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') connectBtn.click();
+    });
+
+    // ── Init ──────────────────────────────────────────────────
+    if (getToken()) { showConnected(); } else { showTokenForm(); }
+  </script>
+
+</body>
+</html>

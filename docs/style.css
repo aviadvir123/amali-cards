@@ -969,6 +969,63 @@ body.celebration-active {
   color: #00E5D4;
 }
 
+.a2hs-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--brand-blue);
+  opacity: 0.3;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: opacity 0.15s ease;
+}
+
+.a2hs-btn:hover { opacity: 0.7; }
+
+.a2hs-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+}
+
+.a2hs-popup {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 340px;
+  background: var(--white);
+  border: 2px solid rgba(32, 80, 130, 0.15);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  z-index: 120;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.a2hs-popup-text {
+  font-size: 0.95rem;
+  color: var(--brand-blue);
+  line-height: 1.6;
+}
+
+.a2hs-popup-close {
+  background: var(--brand-blue);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-family: var(--font-stack);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .social-divider {
   width: 1px;
   height: 20px;

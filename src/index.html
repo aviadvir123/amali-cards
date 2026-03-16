@@ -164,6 +164,7 @@
     <!-- Footer -->
     <footer class="footer">
       <div class="social-footer">
+        <button type="button" id="a2hs-btn" class="a2hs-btn hidden" aria-label="הוסיפו למסך הבית">ⓘ</button>
         <div class="social-links">
           <a href="https://www.bitpay.co.il/app/me/D0C4AE40-6CF5-697D-DDC4-7B6C45BFA6080FE7" target="_blank" rel="noopener" class="bit-footer" aria-label="שלמו בBit">
             <span class="bit-footer-label">bit</span>
@@ -191,6 +192,13 @@
     </footer>
 
   </div>
+
+  <!-- Install hint popup -->
+  <div id="a2hs-popup" class="a2hs-popup hidden" role="dialog">
+    <p id="a2hs-popup-text" class="a2hs-popup-text"></p>
+    <button type="button" id="a2hs-popup-close" class="a2hs-popup-close">הבנתי</button>
+  </div>
+  <div id="a2hs-backdrop" class="a2hs-backdrop hidden"></div>
 
   <!-- Celebration overlay (hidden by default) -->
   <div id="celebration" class="celebration-overlay" role="dialog" aria-modal="true" aria-labelledby="celebration-title">

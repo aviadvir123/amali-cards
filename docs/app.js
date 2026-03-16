@@ -1035,6 +1035,41 @@ promoNewBtnEl.addEventListener("click", function () {
   // Save state if shapes were newly generated (first load or migration)
   saveState(state);
 
+  // Install hint button
+  (function() {
+    var isStandalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
+    if (isStandalone) return;
+    var ua = navigator.userAgent;
+    var isIOS = /iPhone|iPad|iPod/.test(ua);
+    var isAndroid = /Android/.test(ua);
+    if (!isIOS && !isAndroid) return;
+
+    var btn = document.getElementById("a2hs-btn");
+    var popup = document.getElementById("a2hs-popup");
+    var backdrop = document.getElementById("a2hs-backdrop");
+    var textEl = document.getElementById("a2hs-popup-text");
+    var closeBtn = document.getElementById("a2hs-popup-close");
+
+    var msg = isIOS
+      ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן, ואז בחרו \"הוסף למסך הבית\""
+      : "לחצו על שלוש הנקודות ⋮ בפינה העליונה, ואז בחרו \"הוסף למסך הבית\"";
+    textEl.textContent = msg;
+    btn.classList.remove("hidden");
+
+    btn.addEventListener("click", function() {
+      popup.classList.remove("hidden");
+      backdrop.classList.remove("hidden");
+    });
+
+    function closePopup() {
+      popup.classList.add("hidden");
+      backdrop.classList.add("hidden");
+    }
+
+    closeBtn.addEventListener("click", closePopup);
+    backdrop.addEventListener("click", closePopup);
+  })();
+
   // Check for pending celebration
   if (state.celebrationPending) {
     // Show full card behind celebration overlay

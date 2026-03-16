@@ -1050,10 +1050,10 @@ promoNewBtnEl.addEventListener("click", function () {
     var textEl = document.getElementById("a2hs-popup-text");
     var closeBtn = document.getElementById("a2hs-popup-close");
 
-    var msg = isIOS
-      ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן, ואז בחרו \"הוסף למסך הבית\""
-      : "לחצו על שלוש הנקודות ⋮ בפינה העליונה, ואז בחרו \"הוסף למסך הבית\"";
-    textEl.textContent = msg;
+    var step = isIOS
+      ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן ואז \"הוסף למסך הבית\""
+      : "לחצו על שלוש הנקודות ⋮ למעלה ואז \"הוסף למסך הבית\"";
+    textEl.innerHTML = "מומלץ להוריד את האפליקציה למסך הבית :)<br><br>" + step;
     btn.classList.remove("hidden");
 
     btn.addEventListener("click", function() {

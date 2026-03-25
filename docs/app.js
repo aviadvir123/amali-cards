@@ -355,6 +355,12 @@ var cardSettingsCopyBtnEl = document.getElementById("card-settings-copy-btn");
 var cardSettingsCloseBtnEl = document.getElementById("card-settings-close-btn");
 var cardSettingsSwitchReplaceEl = document.getElementById("card-settings-switch-replace");
 var myCardBtnEl = document.getElementById("my-card-btn");
+var utilityDividerEl = document.getElementById("utility-divider");
+
+function showUtilityIcon(el) {
+  el.classList.remove("hidden");
+  utilityDividerEl.classList.remove("hidden");
+}
 
 // ============================================================
 // FIREBASE / CLOUD SYNC
@@ -454,7 +460,7 @@ function confirmNewCard() {
   cardId = pendingNewCardId;
   storeCardId(cardId);
   saveToCloud(state);
-  myCardBtnEl.classList.remove("hidden");
+  showUtilityIcon(myCardBtnEl);
   hideCardBackupModal();
 }
 
@@ -484,7 +490,7 @@ function handleRestoreCard() {
     saveState(restored);
     renderSVGSlots(state.shapeIndices);
     render();
-    myCardBtnEl.classList.remove("hidden");
+    showUtilityIcon(myCardBtnEl);
     hideCardBackupModal();
     showToast("הכרטיס שוחזר בהצלחה :)");
     if (state.celebrationPending) {
@@ -1319,7 +1325,7 @@ promoNewBtnEl.addEventListener("click", function () {
     // Show backup modal (migration if they already have punches)
     showCardBackupModal(state.punches);
   } else {
-    myCardBtnEl.classList.remove("hidden");
+    showUtilityIcon(myCardBtnEl);
     // Background sync: pull from cloud in case local was cleared or behind
     loadFromCloud(cardId, function(cloudData) {
       if (!cloudData || isAnimating || celebrationEl.classList.contains("visible")) return;
@@ -1352,7 +1358,7 @@ promoNewBtnEl.addEventListener("click", function () {
       ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן ואז \"הוסף למסך הבית\" ו\"התקן\""
       : "לחצו על שלוש הנקודות ⋮ למעלה ואז \"הוסף למסך הבית\" ו\"התקן\"";
     textEl.innerHTML = "מומלץ להוריד את האפליקציה למכשיר :)<br><br>" + step;
-    btn.classList.remove("hidden");
+    showUtilityIcon(btn);
 
     btn.addEventListener("click", function() {
       popup.classList.remove("hidden");

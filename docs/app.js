@@ -343,6 +343,7 @@ var cardBackupRestoreViewEl = document.getElementById("card-backup-restore-view"
 var cardBackupIdDisplayEl = document.getElementById("card-backup-id-display");
 var cardBackupNewDescEl = document.getElementById("card-backup-new-desc");
 var cardBackupGotItBtnEl = document.getElementById("card-backup-gotit-btn");
+var cardBackupCopyBtnEl = document.getElementById("card-backup-copy-btn");
 var cardBackupSwitchRestoreEl = document.getElementById("card-backup-switch-restore");
 var cardBackupRestoreInputEl = document.getElementById("card-backup-restore-input");
 var cardBackupRestoreBtnEl = document.getElementById("card-backup-restore-btn");
@@ -473,6 +474,27 @@ function handleRestoreCard() {
 }
 
 cardBackupGotItBtnEl.addEventListener("click", confirmNewCard);
+
+cardBackupCopyBtnEl.addEventListener("click", function() {
+  if (!pendingNewCardId) return;
+  navigator.clipboard.writeText(pendingNewCardId).then(function() {
+    var orig = cardBackupCopyBtnEl.textContent;
+    cardBackupCopyBtnEl.textContent = "הועתק!";
+    setTimeout(function() { cardBackupCopyBtnEl.textContent = orig; }, 1500);
+  }).catch(function() {
+    // Fallback for browsers without clipboard API
+    var ta = document.createElement("textarea");
+    ta.value = pendingNewCardId;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    cardBackupCopyBtnEl.textContent = "הועתק!";
+    setTimeout(function() { cardBackupCopyBtnEl.textContent = "העתקה"; }, 1500);
+  });
+});
 
 cardBackupSwitchRestoreEl.addEventListener("click", function() {
   cardBackupNewViewEl.classList.add("hidden");

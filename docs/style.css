@@ -1082,7 +1082,14 @@ body.celebration-active {
   line-height: 1.55;
 }
 
+.card-backup-id-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .card-backup-id {
+  flex: 1;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -1092,6 +1099,20 @@ body.celebration-active {
   padding: 14px;
   font-family: 'Courier New', monospace;
   direction: ltr;
+}
+
+.card-backup-copy-btn {
+  background: var(--bg);
+  color: var(--brand-blue);
+  border: 2px solid var(--brand-blue);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-family: var(--font-stack);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .card-backup-link {

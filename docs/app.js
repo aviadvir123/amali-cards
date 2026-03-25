@@ -349,6 +349,12 @@ var cardBackupRestoreInputEl = document.getElementById("card-backup-restore-inpu
 var cardBackupRestoreBtnEl = document.getElementById("card-backup-restore-btn");
 var cardBackupRestoreStatusEl = document.getElementById("card-backup-restore-status");
 var cardBackupSwitchNewEl = document.getElementById("card-backup-switch-new");
+var cardSettingsViewEl = document.getElementById("card-settings-view");
+var cardSettingsIdDisplayEl = document.getElementById("card-settings-id-display");
+var cardSettingsCopyBtnEl = document.getElementById("card-settings-copy-btn");
+var cardSettingsCloseBtnEl = document.getElementById("card-settings-close-btn");
+var cardSettingsSwitchReplaceEl = document.getElementById("card-settings-switch-replace");
+var myCardBtnEl = document.getElementById("my-card-btn");
 
 // ============================================================
 // FIREBASE / CLOUD SYNC
@@ -421,8 +427,7 @@ function showCardBackupModal(migrationPunches) {
     cardBackupNewDescEl.textContent = "זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.";
   }
 
-  cardBackupNewViewEl.classList.remove("hidden");
-  cardBackupRestoreViewEl.classList.add("hidden");
+  showAllViews(cardBackupNewViewEl);
   cardBackupRestoreInputEl.value = "";
   cardBackupRestoreBtnEl.disabled = true;
   cardBackupRestoreStatusEl.className = "status-message hidden";
@@ -440,6 +445,7 @@ function confirmNewCard() {
   cardId = pendingNewCardId;
   storeCardId(cardId);
   saveToCloud(state);
+  myCardBtnEl.classList.remove("hidden");
   hideCardBackupModal();
 }
 
@@ -464,6 +470,7 @@ function handleRestoreCard() {
     saveState(restored);
     renderSVGSlots(state.shapeIndices);
     render();
+    myCardBtnEl.classList.remove("hidden");
     hideCardBackupModal();
     showToast("הכרטיס שוחזר בהצלחה :)");
     if (state.celebrationPending) {
@@ -476,24 +483,7 @@ function handleRestoreCard() {
 cardBackupGotItBtnEl.addEventListener("click", confirmNewCard);
 
 cardBackupCopyBtnEl.addEventListener("click", function() {
-  if (!pendingNewCardId) return;
-  navigator.clipboard.writeText(pendingNewCardId).then(function() {
-    var orig = cardBackupCopyBtnEl.textContent;
-    cardBackupCopyBtnEl.textContent = "הועתק!";
-    setTimeout(function() { cardBackupCopyBtnEl.textContent = orig; }, 1500);
-  }).catch(function() {
-    // Fallback for browsers without clipboard API
-    var ta = document.createElement("textarea");
-    ta.value = pendingNewCardId;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-    cardBackupCopyBtnEl.textContent = "הועתק!";
-    setTimeout(function() { cardBackupCopyBtnEl.textContent = "העתקה"; }, 1500);
-  });
+  if (pendingNewCardId) copyCode(pendingNewCardId, cardBackupCopyBtnEl);
 });
 
 cardBackupSwitchRestoreEl.addEventListener("click", function() {
@@ -524,6 +514,64 @@ cardBackupRestoreInputEl.addEventListener("keydown", function(e) {
     handleRestoreCard();
   }
 });
+
+function showAllViews(show) {
+  cardBackupNewViewEl.classList.add("hidden");
+  cardBackupRestoreViewEl.classList.add("hidden");
+  cardSettingsViewEl.classList.add("hidden");
+  show.classList.remove("hidden");
+}
+
+function showCardSettingsModal() {
+  cardSettingsIdDisplayEl.textContent = cardId;
+  cardBackupRestoreInputEl.value = "";
+  cardBackupRestoreBtnEl.disabled = true;
+  cardBackupRestoreStatusEl.className = "status-message hidden";
+  showAllViews(cardSettingsViewEl);
+  cardBackupOverlayEl.classList.remove("hidden");
+  appEl.setAttribute("aria-hidden", "true");
+}
+
+function copyCode(code, btn) {
+  var origText = btn.textContent;
+  navigator.clipboard.writeText(code).then(function() {
+    btn.textContent = "הועתק!";
+    setTimeout(function() { btn.textContent = origText; }, 1500);
+  }).catch(function() {
+    var ta = document.createElement("textarea");
+    ta.value = code;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    btn.textContent = "הועתק!";
+    setTimeout(function() { btn.textContent = origText; }, 1500);
+  });
+}
+
+cardSettingsCopyBtnEl.addEventListener("click", function() {
+  copyCode(cardId, cardSettingsCopyBtnEl);
+});
+
+cardSettingsCloseBtnEl.addEventListener("click", hideCardBackupModal);
+
+cardSettingsSwitchReplaceEl.addEventListener("click", function() {
+  cardBackupRestoreInputEl.value = "";
+  cardBackupRestoreBtnEl.disabled = true;
+  cardBackupRestoreStatusEl.className = "status-message hidden";
+  showAllViews(cardBackupRestoreViewEl);
+  // Override "כרטיס חדש" to go back to settings
+  cardBackupSwitchNewEl.textContent = "ביטול";
+  cardBackupSwitchNewEl.onclick = function() {
+    showAllViews(cardSettingsViewEl);
+    cardBackupSwitchNewEl.textContent = "כרטיס חדש";
+    cardBackupSwitchNewEl.onclick = null;
+  };
+});
+
+myCardBtnEl.addEventListener("click", showCardSettingsModal);
 
 // ============================================================
 // LOCALSTORAGE HELPERS
@@ -1256,6 +1304,7 @@ promoNewBtnEl.addEventListener("click", function () {
     // Show backup modal (migration if they already have punches)
     showCardBackupModal(state.punches);
   } else {
+    myCardBtnEl.classList.remove("hidden");
     // Background sync: pull from cloud in case local was cleared or behind
     loadFromCloud(cardId, function(cloudData) {
       if (!cloudData || isAnimating || celebrationEl.classList.contains("visible")) return;

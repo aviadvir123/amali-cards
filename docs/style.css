@@ -1128,4 +1128,20 @@ body.celebration-active {
   color: var(--brand-blue);
 }
 
+.my-card-btn {
+  background: none;
+  border: none;
+  color: var(--gray-dark);
+  font-family: var(--font-stack);
+  font-size: 0.8rem;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 8px 0 12px;
+  text-decoration: underline;
+}
+
+.my-card-btn:hover {
+  color: var(--brand-blue);
+}
+
 

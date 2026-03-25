@@ -198,6 +198,7 @@
           </a>
         </div>
       </div>
+      <button type="button" id="my-card-btn" class="my-card-btn hidden">הכרטיס שלי</button>
     </footer>
 
   </div>
@@ -233,6 +234,18 @@
         <button type="button" id="card-backup-restore-btn" class="punch-btn" disabled>שחזור</button>
         <div id="card-backup-restore-status" class="status-message hidden" role="status" aria-live="polite"></div>
         <p class="card-backup-link" id="card-backup-switch-new">כרטיס חדש</p>
+      </div>
+
+      <!-- Settings view -->
+      <div id="card-settings-view" class="hidden">
+        <p class="card-backup-title">הכרטיס שלי</p>
+        <p class="card-backup-desc">הקוד האישי שלכם — שמרו אותו לשחזור בכל מכשיר</p>
+        <div class="card-backup-id-wrap">
+          <div class="card-backup-id" id="card-settings-id-display"></div>
+          <button type="button" id="card-settings-copy-btn" class="card-backup-copy-btn" aria-label="העתקה">העתקה</button>
+        </div>
+        <button type="button" id="card-settings-close-btn" class="punch-btn">סגור</button>
+        <p class="card-backup-link" id="card-settings-switch-replace">החלף כרטיס</p>
       </div>
 
     </div>

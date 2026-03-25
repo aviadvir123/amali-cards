@@ -14,6 +14,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="app.js" defer></script>
   <title>עמלי - כרטיס ניקוב</title>
 </head>
@@ -206,6 +208,32 @@
     <button type="button" id="a2hs-popup-close" class="a2hs-popup-close">הבנתי</button>
   </div>
   <div id="a2hs-backdrop" class="a2hs-backdrop hidden"></div>
+
+  <!-- Card backup modal -->
+  <div id="card-backup-overlay" class="card-backup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="card-backup-title">
+    <div class="card-backup-modal">
+
+      <!-- New card view (default) -->
+      <div id="card-backup-new-view">
+        <p class="card-backup-title" id="card-backup-title">שמרו את הכרטיס שלכם</p>
+        <p class="card-backup-desc" id="card-backup-new-desc">זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.</p>
+        <div class="card-backup-id" id="card-backup-id-display"></div>
+        <button type="button" id="card-backup-gotit-btn" class="punch-btn">הבנתי</button>
+        <p class="card-backup-link" id="card-backup-switch-restore">יש לי קוד קיים</p>
+      </div>
+
+      <!-- Restore view -->
+      <div id="card-backup-restore-view" class="hidden">
+        <p class="card-backup-title">שחזור כרטיס</p>
+        <p class="card-backup-desc">הזינו את הקוד שלכם</p>
+        <input type="text" id="card-backup-restore-input" class="code-input" dir="ltr" placeholder="AB34X7" maxlength="6" autocomplete="off" inputmode="text">
+        <button type="button" id="card-backup-restore-btn" class="punch-btn" disabled>שחזור</button>
+        <div id="card-backup-restore-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        <p class="card-backup-link" id="card-backup-switch-new">כרטיס חדש</p>
+      </div>
+
+    </div>
+  </div>
 
   <!-- Celebration overlay (hidden by default) -->
   <div id="celebration" class="celebration-overlay" role="dialog" aria-modal="true" aria-labelledby="celebration-title">

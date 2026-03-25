@@ -2,6 +2,22 @@
 // CONFIGURATION — Change these values to customize the app
 // ============================================================
 
+// ============================================================
+// FIREBASE CONFIG — fill in from your Firebase project console
+// (firebase.google.com → Project settings → Your apps → Web app)
+// Leave apiKey as "" to run without cloud backup.
+// ============================================================
+
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAWxrXv1t2Ut5onoPuOlw6hFK0xfxNGGhk",
+  authDomain: "amali-cards.firebaseapp.com",
+  projectId: "amali-cards"
+};
+
+// The localStorage key that stores this device's card ID
+var CARD_ID_KEY = "amali_card_id";
+
+
 // Change this value to update the punch code for all customers.
 // Can be any string: "2552", "caffe", "Amali2026", "7", etc.
 var PUNCH_CODE = "8525";
@@ -207,6 +223,11 @@ var isAnimating = false;
 
 var currentPromo = { code: null, amount: null };
 
+// Cloud sync
+var db = null;
+var cardId = null;
+var pendingNewCardId = null;
+
 // ============================================================
 // SHAPE RENDERING
 // ============================================================
@@ -315,6 +336,173 @@ function renderSVGSlots(shapeIndices) {
   }
 }
 
+// Card backup modal DOM references
+var cardBackupOverlayEl = document.getElementById("card-backup-overlay");
+var cardBackupNewViewEl = document.getElementById("card-backup-new-view");
+var cardBackupRestoreViewEl = document.getElementById("card-backup-restore-view");
+var cardBackupIdDisplayEl = document.getElementById("card-backup-id-display");
+var cardBackupNewDescEl = document.getElementById("card-backup-new-desc");
+var cardBackupGotItBtnEl = document.getElementById("card-backup-gotit-btn");
+var cardBackupSwitchRestoreEl = document.getElementById("card-backup-switch-restore");
+var cardBackupRestoreInputEl = document.getElementById("card-backup-restore-input");
+var cardBackupRestoreBtnEl = document.getElementById("card-backup-restore-btn");
+var cardBackupRestoreStatusEl = document.getElementById("card-backup-restore-status");
+var cardBackupSwitchNewEl = document.getElementById("card-backup-switch-new");
+
+// ============================================================
+// FIREBASE / CLOUD SYNC
+// ============================================================
+
+function initFirebase() {
+  if (!FIREBASE_CONFIG.apiKey) return;
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+  } catch (e) {}
+}
+
+function generateCardId() {
+  var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  var id = "";
+  for (var i = 0; i < 6; i++) {
+    id += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return id;
+}
+
+function getStoredCardId() {
+  try { return localStorage.getItem(CARD_ID_KEY) || null; } catch(e) { return null; }
+}
+
+function storeCardId(id) {
+  try { localStorage.setItem(CARD_ID_KEY, id); } catch(e) {}
+}
+
+function loadFromCloud(id, callback) {
+  if (!db) { callback(null); return; }
+  db.collection("cards").doc(id).get()
+    .then(function(doc) { callback(doc.exists ? doc.data() : null); })
+    .catch(function() { callback(null); });
+}
+
+function saveToCloud(stateData) {
+  if (!db || !cardId) return;
+  db.collection("cards").doc(cardId).set({
+    punches: stateData.punches,
+    celebrationPending: stateData.celebrationPending,
+    shapeIndices: stateData.shapeIndices
+  }).catch(function() {});
+}
+
+function validateCloudState(data) {
+  var defaults = { punches: 0, celebrationPending: false, shapeIndices: generateShapeIndices() };
+  if (!data) return defaults;
+  if (typeof data.punches !== "number" || !Number.isInteger(data.punches) ||
+      data.punches < 0 || data.punches > TOTAL_PUNCHES) return defaults;
+  if (typeof data.celebrationPending !== "boolean") return defaults;
+  if (!Array.isArray(data.shapeIndices) || data.shapeIndices.length !== TOTAL_PUNCHES) {
+    return { punches: data.punches, celebrationPending: data.celebrationPending, shapeIndices: generateShapeIndices() };
+  }
+  return { punches: data.punches, celebrationPending: data.celebrationPending, shapeIndices: data.shapeIndices.slice() };
+}
+
+// ============================================================
+// CARD BACKUP MODAL
+// ============================================================
+
+function showCardBackupModal(migrationPunches) {
+  pendingNewCardId = generateCardId();
+  cardBackupIdDisplayEl.textContent = pendingNewCardId;
+
+  if (migrationPunches > 0) {
+    cardBackupNewDescEl.textContent = "יש לכם " + migrationPunches + " ניקובים! שמרו את הקוד כדי שלא תאבדו אותם אף פעם.";
+  } else {
+    cardBackupNewDescEl.textContent = "זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.";
+  }
+
+  cardBackupNewViewEl.classList.remove("hidden");
+  cardBackupRestoreViewEl.classList.add("hidden");
+  cardBackupRestoreInputEl.value = "";
+  cardBackupRestoreBtnEl.disabled = true;
+  cardBackupRestoreStatusEl.className = "status-message hidden";
+
+  cardBackupOverlayEl.classList.remove("hidden");
+  appEl.setAttribute("aria-hidden", "true");
+}
+
+function hideCardBackupModal() {
+  cardBackupOverlayEl.classList.add("hidden");
+  appEl.removeAttribute("aria-hidden");
+}
+
+function confirmNewCard() {
+  cardId = pendingNewCardId;
+  storeCardId(cardId);
+  saveToCloud(state);
+  hideCardBackupModal();
+}
+
+function handleRestoreCard() {
+  var enteredId = cardBackupRestoreInputEl.value.trim().toUpperCase();
+  if (!enteredId) return;
+
+  cardBackupRestoreBtnEl.disabled = true;
+  cardBackupRestoreStatusEl.textContent = "מחפש...";
+  cardBackupRestoreStatusEl.className = "status-message";
+
+  loadFromCloud(enteredId, function(cloudData) {
+    cardBackupRestoreBtnEl.disabled = false;
+    if (!cloudData) {
+      cardBackupRestoreStatusEl.textContent = "קוד לא נמצא, נסו שוב";
+      cardBackupRestoreStatusEl.className = "status-message error";
+      return;
+    }
+    var restored = validateCloudState(cloudData);
+    cardId = enteredId;
+    storeCardId(cardId);
+    saveState(restored);
+    renderSVGSlots(state.shapeIndices);
+    render();
+    hideCardBackupModal();
+    showToast("הכרטיס שוחזר בהצלחה :)");
+    if (state.celebrationPending) {
+      lockUI();
+      showCelebration();
+    }
+  });
+}
+
+cardBackupGotItBtnEl.addEventListener("click", confirmNewCard);
+
+cardBackupSwitchRestoreEl.addEventListener("click", function() {
+  cardBackupNewViewEl.classList.add("hidden");
+  cardBackupRestoreViewEl.classList.remove("hidden");
+  cardBackupRestoreInputEl.value = "";
+  cardBackupRestoreStatusEl.className = "status-message hidden";
+  cardBackupRestoreBtnEl.disabled = true;
+});
+
+cardBackupSwitchNewEl.addEventListener("click", function() {
+  cardBackupRestoreViewEl.classList.add("hidden");
+  cardBackupNewViewEl.classList.remove("hidden");
+});
+
+cardBackupRestoreInputEl.addEventListener("input", function() {
+  cardBackupRestoreBtnEl.disabled = (cardBackupRestoreInputEl.value.trim().length === 0);
+  if (cardBackupRestoreStatusEl.classList.contains("error")) {
+    cardBackupRestoreStatusEl.className = "status-message hidden";
+  }
+});
+
+cardBackupRestoreBtnEl.addEventListener("click", handleRestoreCard);
+
+cardBackupRestoreInputEl.addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !cardBackupRestoreBtnEl.disabled) {
+    e.preventDefault();
+    handleRestoreCard();
+  }
+});
+
 // ============================================================
 // LOCALSTORAGE HELPERS
 // ============================================================
@@ -404,7 +592,7 @@ function loadState() {
 }
 
 /**
- * Save state to localStorage. Shows a toast on error.
+ * Save state to localStorage and cloud. Shows a toast on error.
  */
 function saveState(newState) {
   state = newState;
@@ -413,6 +601,7 @@ function saveState(newState) {
   } catch (e) {
     showToast("לא ניתן לשמור את הכרטיס");
   }
+  saveToCloud(state);
 }
 
 // ============================================================
@@ -1022,6 +1211,9 @@ promoNewBtnEl.addEventListener("click", function () {
     return;
   }
 
+  // Initialize Firebase
+  initFirebase();
+
   // Load persisted state
   state = loadState();
 
@@ -1033,7 +1225,27 @@ promoNewBtnEl.addEventListener("click", function () {
   updatePunchButtonState();
 
   // Save state if shapes were newly generated (first load or migration)
-  saveState(state);
+  // (skip cloud save here — card ID not assigned yet)
+  try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+
+  // Card ID / cloud sync
+  cardId = getStoredCardId();
+  if (!cardId) {
+    // Show backup modal (migration if they already have punches)
+    showCardBackupModal(state.punches);
+  } else {
+    // Background sync: pull from cloud in case local was cleared or behind
+    loadFromCloud(cardId, function(cloudData) {
+      if (!cloudData || isAnimating || celebrationEl.classList.contains("visible")) return;
+      var cloudState = validateCloudState(cloudData);
+      if (cloudState.punches > state.punches) {
+        state = cloudState;
+        try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+        renderSVGSlots(state.shapeIndices);
+        render();
+      }
+    });
+  }
 
   // Install hint button
   (function() {

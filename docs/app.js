@@ -394,10 +394,19 @@ function loadFromCloud(id, callback) {
 
 function saveToCloud(stateData) {
   if (!db || !cardId) return;
+  var promoData = {};
+  var activePromo = null;
+  try {
+    var raw = localStorage.getItem(PROMO_LOCALSTORAGE_KEY);
+    if (raw) promoData = JSON.parse(raw);
+    activePromo = localStorage.getItem(ACTIVE_PROMO_KEY) || null;
+  } catch(e) {}
   db.collection("cards").doc(cardId).set({
     punches: stateData.punches,
     celebrationPending: stateData.celebrationPending,
-    shapeIndices: stateData.shapeIndices
+    shapeIndices: stateData.shapeIndices,
+    promos: promoData,
+    activePromo: activePromo
   }).catch(function() {});
 }
 
@@ -467,6 +476,11 @@ function handleRestoreCard() {
     var restored = validateCloudState(cloudData);
     cardId = enteredId;
     storeCardId(cardId);
+    // Restore promo data if present
+    try {
+      if (cloudData.promos) localStorage.setItem(PROMO_LOCALSTORAGE_KEY, JSON.stringify(cloudData.promos));
+      if (cloudData.activePromo) localStorage.setItem(ACTIVE_PROMO_KEY, cloudData.activePromo);
+    } catch(e) {}
     saveState(restored);
     renderSVGSlots(state.shapeIndices);
     render();
@@ -1061,6 +1075,7 @@ function savePromoRedemption(code, usedAmount) {
       history: current.history.concat([{ used: usedAmount, date: today }])
     };
     localStorage.setItem(PROMO_LOCALSTORAGE_KEY, JSON.stringify(data));
+    saveToCloud(state);
   } catch (e) {
     // ignore
   }

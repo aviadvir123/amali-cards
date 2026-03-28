@@ -227,6 +227,7 @@ var currentPromo = { code: null, amount: null };
 var db = null;
 var cardId = null;
 var pendingNewCardId = null;
+var pendingCarryOver = 0;
 
 // ============================================================
 // SHAPE RENDERING
@@ -338,8 +339,12 @@ function renderSVGSlots(shapeIndices) {
 
 // Card backup modal DOM references
 var cardBackupOverlayEl = document.getElementById("card-backup-overlay");
+var cardBackupChoiceViewEl = document.getElementById("card-backup-choice-view");
+var cardBackupChoiceNewBtnEl = document.getElementById("card-backup-choice-new-btn");
+var cardBackupChoiceRestoreEl = document.getElementById("card-backup-choice-restore");
 var cardBackupNewViewEl = document.getElementById("card-backup-new-view");
 var cardBackupRestoreViewEl = document.getElementById("card-backup-restore-view");
+var cardIdDisplayEl = document.getElementById("card-id-display");
 var cardBackupIdDisplayEl = document.getElementById("card-backup-id-display");
 var cardBackupNewDescEl = document.getElementById("card-backup-new-desc");
 var cardBackupGotItBtnEl = document.getElementById("card-backup-gotit-btn");
@@ -433,19 +438,20 @@ function validateCloudState(data) {
 // ============================================================
 
 function showCardBackupModal(migrationPunches) {
-  pendingNewCardId = generateCardId();
-  cardBackupIdDisplayEl.textContent = pendingNewCardId;
-
-  if (migrationPunches > 0) {
-    cardBackupNewDescEl.textContent = "יש לכם " + migrationPunches + " ניקובים! שמרו את הקוד כדי שלא תאבדו אותם אף פעם.";
-  } else {
-    cardBackupNewDescEl.textContent = "זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.";
-  }
-
-  showAllViews(cardBackupNewViewEl);
   cardBackupRestoreInputEl.value = "";
   cardBackupRestoreBtnEl.disabled = true;
   cardBackupRestoreStatusEl.className = "status-message hidden";
+
+  if (migrationPunches > 0) {
+    // User has existing punches but no card ID — give them a new code immediately
+    pendingNewCardId = generateCardId();
+    cardBackupIdDisplayEl.textContent = pendingNewCardId;
+    cardBackupNewDescEl.textContent = "יש לכם " + migrationPunches + " ניקובים! שמרו את הקוד כדי שלא תאבדו אותם אף פעם.";
+    showAllViews(cardBackupNewViewEl);
+  } else {
+    // New or returning user — ask first before generating a code
+    showAllViews(cardBackupChoiceViewEl);
+  }
 
   cardBackupOverlayEl.classList.remove("hidden");
   appEl.setAttribute("aria-hidden", "true");
@@ -461,6 +467,7 @@ function confirmNewCard() {
   storeCardId(cardId);
   saveToCloud(state);
   showUtilityIcon(myCardBtnEl);
+  updateCardIdDisplay();
   hideCardBackupModal();
 }
 
@@ -491,6 +498,7 @@ function handleRestoreCard() {
     renderSVGSlots(state.shapeIndices);
     render();
     showUtilityIcon(myCardBtnEl);
+    updateCardIdDisplay();
     hideCardBackupModal();
     showToast("הכרטיס שוחזר בהצלחה :)");
     if (state.celebrationPending) {
@@ -499,6 +507,17 @@ function handleRestoreCard() {
     }
   });
 }
+
+cardBackupChoiceNewBtnEl.addEventListener("click", function() {
+  pendingNewCardId = generateCardId();
+  cardBackupIdDisplayEl.textContent = pendingNewCardId;
+  cardBackupNewDescEl.textContent = "זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.";
+  showAllViews(cardBackupNewViewEl);
+});
+
+cardBackupChoiceRestoreEl.addEventListener("click", function() {
+  showAllViews(cardBackupRestoreViewEl);
+});
 
 cardBackupGotItBtnEl.addEventListener("click", confirmNewCard);
 
@@ -515,8 +534,12 @@ cardBackupSwitchRestoreEl.addEventListener("click", function() {
 });
 
 cardBackupSwitchNewEl.addEventListener("click", function() {
-  cardBackupRestoreViewEl.classList.add("hidden");
-  cardBackupNewViewEl.classList.remove("hidden");
+  if (!pendingNewCardId) {
+    pendingNewCardId = generateCardId();
+    cardBackupIdDisplayEl.textContent = pendingNewCardId;
+    cardBackupNewDescEl.textContent = "זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.";
+  }
+  showAllViews(cardBackupNewViewEl);
 });
 
 cardBackupRestoreInputEl.addEventListener("input", function() {
@@ -536,10 +559,18 @@ cardBackupRestoreInputEl.addEventListener("keydown", function(e) {
 });
 
 function showAllViews(show) {
+  cardBackupChoiceViewEl.classList.add("hidden");
   cardBackupNewViewEl.classList.add("hidden");
   cardBackupRestoreViewEl.classList.add("hidden");
   cardSettingsViewEl.classList.add("hidden");
   show.classList.remove("hidden");
+}
+
+function updateCardIdDisplay() {
+  if (cardId && cardIdDisplayEl) {
+    cardIdDisplayEl.innerHTML = "הכרטיס שלי: <span dir=\"ltr\">" + cardId + "</span>";
+    cardIdDisplayEl.classList.remove("hidden");
+  }
 }
 
 function showCardSettingsModal() {
@@ -713,10 +744,7 @@ function render() {
 
   progressCountEl.textContent = state.punches;
 
-  var maxQuantity = TOTAL_PUNCHES - state.punches;
-  if (maxQuantity < MIN_QUANTITY) {
-    maxQuantity = MIN_QUANTITY;
-  }
+  var maxQuantity = TOTAL_PUNCHES;
   if (quantity > maxQuantity) {
     quantity = maxQuantity;
   }
@@ -858,16 +886,26 @@ function dismissCelebration() {
 
     // Generate new shapes for the new card
     var newIndices = generateShapeIndices();
+    var carryOver = pendingCarryOver;
+    pendingCarryOver = 0;
+
     saveState({ punches: 0, celebrationPending: false, shapeIndices: newIndices });
-
-    // Re-render SVG with new shapes
     renderSVGSlots(state.shapeIndices);
-
-    quantity = 1;
     render();
-    unlockUI();
 
-    showToast("כרטיסיה חדשה :)");
+    if (carryOver > 0) {
+      lockUI();
+      animatePunches(0, carryOver, function () {
+        saveState({ punches: carryOver, celebrationPending: false, shapeIndices: newIndices });
+        quantity = 1;
+        unlockUI();
+        showToast("כרטיסיה חדשה עם " + carryOver + " ניקובים :)");
+      });
+    } else {
+      quantity = 1;
+      unlockUI();
+      showToast("כרטיסיה חדשה :)");
+    }
   }, 300);
 }
 
@@ -887,9 +925,7 @@ function unlockUI() {
   isAnimating = false;
   codeInputEl.disabled = false;
   updatePunchButtonState();
-  var maxQuantity = TOTAL_PUNCHES - state.punches;
-  if (maxQuantity < MIN_QUANTITY) maxQuantity = MIN_QUANTITY;
-  renderStepper(maxQuantity);
+  renderStepper(TOTAL_PUNCHES);
 }
 
 function handlePunch() {
@@ -902,21 +938,19 @@ function handlePunch() {
     var oldPunches = state.punches;
     var awardedQuantity = quantity;
     var newPunches = oldPunches + awardedQuantity;
-
-    if (newPunches > TOTAL_PUNCHES) {
-      newPunches = TOTAL_PUNCHES;
-      awardedQuantity = TOTAL_PUNCHES - oldPunches;
-    }
+    var carryOver = Math.max(0, newPunches - TOTAL_PUNCHES);
+    var punchesToFill = awardedQuantity - carryOver;
 
     codeInputEl.value = "";
     quantity = 1;
     clearStatusMessage();
     lockUI();
 
-    if (newPunches === TOTAL_PUNCHES) {
+    if (newPunches >= TOTAL_PUNCHES) {
+      pendingCarryOver = carryOver;
       saveState({ punches: 0, celebrationPending: true, shapeIndices: state.shapeIndices });
 
-      animatePunches(oldPunches, awardedQuantity, function () {
+      animatePunches(oldPunches, punchesToFill, function () {
         setTimeout(function () {
           showCelebration();
         }, 500);
@@ -952,19 +986,15 @@ stepperMinusEl.addEventListener("click", function () {
   if (isAnimating) return;
   if (quantity > MIN_QUANTITY) {
     quantity--;
-    var maxQuantity = TOTAL_PUNCHES - state.punches;
-    if (maxQuantity < MIN_QUANTITY) maxQuantity = MIN_QUANTITY;
-    renderStepper(maxQuantity);
+    renderStepper(TOTAL_PUNCHES);
   }
 });
 
 stepperPlusEl.addEventListener("click", function () {
   if (isAnimating) return;
-  var maxQuantity = TOTAL_PUNCHES - state.punches;
-  if (maxQuantity < MIN_QUANTITY) maxQuantity = MIN_QUANTITY;
-  if (quantity < maxQuantity) {
+  if (quantity < TOTAL_PUNCHES) {
     quantity++;
-    renderStepper(maxQuantity);
+    renderStepper(TOTAL_PUNCHES);
   }
 });
 
@@ -1326,6 +1356,7 @@ promoNewBtnEl.addEventListener("click", function () {
     showCardBackupModal(state.punches);
   } else {
     showUtilityIcon(myCardBtnEl);
+    updateCardIdDisplay();
     // Background sync: pull from cloud in case local was cleared or behind
     loadFromCloud(cardId, function(cloudData) {
       if (!cloudData || isAnimating || celebrationEl.classList.contains("visible")) return;

@@ -57,6 +57,8 @@
         <p class="card-progress" dir="ltr"><span id="progress-count">0</span> / 10</p>
       </section>
 
+      <p id="card-id-display" class="card-id-display hidden"></p>
+
       <!-- Quantity selector -->
       <section class="quantity-section">
         <p class="quantity-label">כמה ניקובים?</p>
@@ -224,7 +226,15 @@
   <div id="card-backup-overlay" class="card-backup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="card-backup-title">
     <div class="card-backup-modal">
 
-      <!-- New card view (default) -->
+      <!-- Choice view (shown for new users with no punches) -->
+      <div id="card-backup-choice-view" class="hidden">
+        <p class="card-backup-title" id="card-backup-title">ברוכים הבאים לעמלי</p>
+        <p class="card-backup-desc">כרטיס הניקובים הדיגיטלי שלכם</p>
+        <button type="button" id="card-backup-choice-new-btn" class="punch-btn">כרטיס חדש</button>
+        <p class="card-backup-link" id="card-backup-choice-restore">יש לי קוד קיים</p>
+      </div>
+
+      <!-- New card view (shown for migration or after choosing "new") -->
       <div id="card-backup-new-view">
         <p class="card-backup-title" id="card-backup-title">שמרו את הכרטיס שלכם</p>
         <p class="card-backup-desc" id="card-backup-new-desc">זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.</p>

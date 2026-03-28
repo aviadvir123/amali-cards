@@ -128,7 +128,7 @@ body {
   box-shadow: var(--card-shadow);
   padding: 20px 12px 16px;
   margin-top: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
 
 .card-grid {
@@ -149,6 +149,15 @@ body {
   font-weight: 700;
   color: var(--brand-blue);
   margin-top: 12px;
+  letter-spacing: 0.05em;
+}
+
+.card-id-display {
+  text-align: center;
+  font-size: 0.72rem;
+  color: rgba(32, 80, 130, 0.45);
+  margin-top: 4px;
+  margin-bottom: 16px;
   letter-spacing: 0.05em;
 }
 

@@ -988,31 +988,18 @@ function handlePunch() {
   if (!logoEl) return;
   var tapCount = 0;
   var tapTimer = null;
-  var lastWasTouch = false;
 
-  function handleTap(e) {
-    // Deduplicate: touchend fires before click on mobile, skip the ghost click
-    if (e.type === "click" && lastWasTouch) { lastWasTouch = false; return; }
-    if (e.type === "touchend") { lastWasTouch = true; e.preventDefault(); }
-
+  logoEl.addEventListener("touchstart", function(e) {
+    e.preventDefault();
     tapCount++;
     if (tapTimer) clearTimeout(tapTimer);
     tapTimer = setTimeout(function() { tapCount = 0; }, 1000);
     if (tapCount >= 3) {
       tapCount = 0;
       clearTimeout(tapTimer);
-      var a = document.createElement("a");
-      a.href = "https://forms.gle/7vKbKuAPGsU5w6Jz8";
-      a.target = "_blank";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      window.open("https://forms.gle/7vKbKuAPGsU5w6Jz8", "_blank");
     }
-  }
-
-  logoEl.addEventListener("touchend", handleTap);
-  logoEl.addEventListener("click", handleTap);
+  }, { passive: false });
 })();
 
 stepperMinusEl.addEventListener("click", function () {

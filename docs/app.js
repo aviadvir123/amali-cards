@@ -1001,7 +1001,13 @@ function handlePunch() {
     if (tapCount >= 3) {
       tapCount = 0;
       clearTimeout(tapTimer);
-      window.open("https://forms.gle/7vKbKuAPGsU5w6Jz8", "_blank");
+      var a = document.createElement("a");
+      a.href = "https://forms.gle/7vKbKuAPGsU5w6Jz8";
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   }
 

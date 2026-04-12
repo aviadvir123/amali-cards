@@ -168,58 +168,54 @@
     <!-- Footer -->
     <footer class="footer">
       <div class="social-footer">
-        <div class="social-links">
+          <!-- Row 1: App utility icons -->
+          <div class="social-links">
+            <button type="button" id="my-card-btn" class="social-link social-link--card hidden" aria-label="הכרטיס שלי">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="5" width="20" height="14" rx="3"/>
+                <line x1="2" y1="10" x2="22" y2="10"/>
+              </svg>
+            </button>
+            <button type="button" id="a2hs-btn" class="social-link a2hs-btn hidden" aria-label="הוסיפו למסך הבית">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="4"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+              </svg>
+            </button>
+            <div id="utility-divider" class="hidden"></div>
+            <a href="https://forms.gle/7vKbKuAPGsU5w6Jz8" target="_blank" rel="noopener" class="social-link social-link--jobs" aria-label="הצטרפו לצוות">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12l3-3 4 1 2-2 4 1 3-3"/>
+                <path d="M3 12l3 3 4-1 2 2 4-1 3 3"/>
+              </svg>
+            </a>
+          </div>
 
-          <!-- Utility icons: my card + install hint (hidden until relevant) -->
-          <button type="button" id="my-card-btn" class="social-link hidden" aria-label="הכרטיס שלי">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="5" width="20" height="14" rx="3"/>
-              <line x1="2" y1="10" x2="22" y2="10"/>
-            </svg>
-          </button>
-          <button type="button" id="a2hs-btn" class="social-link a2hs-btn hidden" aria-label="הוסיפו למסך הבית">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="4"/>
-              <line x1="12" y1="8" x2="12" y2="16"/>
-              <line x1="8" y1="12" x2="16" y2="12"/>
-            </svg>
-          </button>
-          <div id="utility-divider" class="social-divider hidden"></div>
-
-          <!-- Social icons -->
-          <a href="https://www.bitpay.co.il/app/me/D0C4AE40-6CF5-697D-DDC4-7B6C45BFA6080FE7" target="_blank" rel="noopener" class="bit-footer" aria-label="שלמו בBit">
-            <span class="bit-footer-label">bit</span>
-          </a>
-          <div class="social-divider"></div>
-          <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="social-link social-link--maps" aria-label="Google Maps">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-          </a>
-          <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link social-link--instagram" aria-label="Instagram">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-              <circle cx="12" cy="12" r="4.5"/>
-              <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
-            </svg>
-          </a>
-          <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link social-link--facebook" aria-label="Facebook">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-            </svg>
-          </a>
-          <div class="social-divider"></div>
-          <a href="https://forms.gle/7vKbKuAPGsU5w6Jz8" target="_blank" rel="noopener" class="social-link social-link--jobs" aria-label="הצטרפו לצוות">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m11 17 2 2a1 1 0 1 0 3-3"/>
-              <path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 0-3 3l2 2"/>
-              <path d="M5 21 8 18"/>
-              <path d="m3 17 2 2a1 1 0 0 0 3-3l-3-3a1 1 0 0 0-1.42 0L3 14a5 5 0 0 0 0 7"/>
-              <path d="m3 9 1-4L8 4l4 4-1 2a7 7 0 0 0 4 4l1-1 4 4-1 3-4 1a14 14 0 0 1-14-14"/>
-            </svg>
-          </a>
-
-        </div>
+          <!-- Row 2: Social media -->
+          <div class="social-links">
+            <a href="https://www.bitpay.co.il/app/me/D0C4AE40-6CF5-697D-DDC4-7B6C45BFA6080FE7" target="_blank" rel="noopener" class="bit-footer" aria-label="שלמו בBit">
+              <span class="bit-footer-label">bit</span>
+            </a>
+            <div class="social-divider"></div>
+            <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="social-link social-link--maps" aria-label="Google Maps">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+            </a>
+            <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link social-link--instagram" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <circle cx="12" cy="12" r="4.5"/>
+                <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
+              </svg>
+            </a>
+            <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link social-link--facebook" aria-label="Facebook">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+              </svg>
+            </a>
+          </div>
       </div>
     </footer>
 

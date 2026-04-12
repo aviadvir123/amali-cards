@@ -982,6 +982,24 @@ function handlePunch() {
 // EVENT HANDLERS
 // ============================================================
 
+// Triple-tap the logo to open the job application form
+(function() {
+  var logoEl = document.querySelector(".header-logo");
+  if (!logoEl) return;
+  var tapCount = 0;
+  var tapTimer = null;
+  logoEl.addEventListener("click", function() {
+    tapCount++;
+    if (tapTimer) clearTimeout(tapTimer);
+    tapTimer = setTimeout(function() { tapCount = 0; }, 800);
+    if (tapCount >= 3) {
+      tapCount = 0;
+      clearTimeout(tapTimer);
+      window.open("https://forms.gle/7vKbKuAPGsU5w6Jz8", "_blank");
+    }
+  });
+})();
+
 stepperMinusEl.addEventListener("click", function () {
   if (isAnimating) return;
   if (quantity > MIN_QUANTITY) {

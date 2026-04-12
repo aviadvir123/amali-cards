@@ -988,16 +988,25 @@ function handlePunch() {
   if (!logoEl) return;
   var tapCount = 0;
   var tapTimer = null;
-  logoEl.addEventListener("click", function() {
+  var lastWasTouch = false;
+
+  function handleTap(e) {
+    // Deduplicate: touchend fires before click on mobile, skip the ghost click
+    if (e.type === "click" && lastWasTouch) { lastWasTouch = false; return; }
+    if (e.type === "touchend") { lastWasTouch = true; e.preventDefault(); }
+
     tapCount++;
     if (tapTimer) clearTimeout(tapTimer);
-    tapTimer = setTimeout(function() { tapCount = 0; }, 800);
+    tapTimer = setTimeout(function() { tapCount = 0; }, 1000);
     if (tapCount >= 3) {
       tapCount = 0;
       clearTimeout(tapTimer);
       window.open("https://forms.gle/7vKbKuAPGsU5w6Jz8", "_blank");
     }
-  });
+  }
+
+  logoEl.addEventListener("touchend", handleTap);
+  logoEl.addEventListener("click", handleTap);
 })();
 
 stepperMinusEl.addEventListener("click", function () {

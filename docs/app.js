@@ -622,7 +622,13 @@ cardSettingsSwitchReplaceEl.addEventListener("click", function() {
   };
 });
 
-myCardBtnEl.addEventListener("click", showCardSettingsModal);
+myCardBtnEl.addEventListener("click", function() {
+  if (cardId) {
+    showCardSettingsModal();
+  } else {
+    showCardBackupModal(state.punches);
+  }
+});
 
 // ============================================================
 // LOCALSTORAGE HELPERS

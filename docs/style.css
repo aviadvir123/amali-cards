@@ -378,7 +378,7 @@ body {
 .social-link--maps      { color: #EA4335; }
 .social-link--instagram { color: #E1306C; }
 .social-link--facebook  { color: #1877F2; }
-.social-link--card      { color: #205082; opacity: 1; }
+.social-link--card      { color: #205082; opacity: 1; border: none; background: none; cursor: pointer; padding: 0; }
 .social-link--jobs {
   display: inline-flex;
   align-items: center;

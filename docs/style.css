@@ -379,7 +379,7 @@ body {
 .social-link--instagram { color: #E1306C; }
 .social-link--facebook  { color: #1877F2; }
 .social-link--card      { color: #205082; opacity: 1; }
-.social-link--jobs      { font-size: 20px; opacity: 0.85; }
+.social-link--jobs      { font-size: 24px; opacity: 1; width: 34px; height: 34px; }
 
 .social-link:hover,
 .social-link:focus-visible {

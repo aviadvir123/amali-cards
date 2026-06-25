@@ -2,25 +2,9 @@
 // CONFIGURATION — Change these values to customize the app
 // ============================================================
 
-// ============================================================
-// FIREBASE CONFIG — fill in from your Firebase project console
-// (firebase.google.com → Project settings → Your apps → Web app)
-// Leave apiKey as "" to run without cloud backup.
-// ============================================================
-
-var FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAWxrXv1t2Ut5onoPuOlw6hFK0xfxNGGhk",
-  authDomain: "amali-cards.firebaseapp.com",
-  projectId: "amali-cards"
-};
-
-// The localStorage key that stores this device's card ID
-var CARD_ID_KEY = "amali_card_id";
-
-
 // Change this value to update the punch code for all customers.
 // Can be any string: "2552", "caffe", "Amali2026", "7", etc.
-var PUNCH_CODE = "8525";
+var PUNCH_CODE = "2552";
 
 // Change to "text" if PUNCH_CODE contains letters. "numeric" opens the number pad on mobile.
 var INPUT_MODE = "numeric";
@@ -42,7 +26,8 @@ var LOCALSTORAGE_KEY = "amali_punch_card";
 // ============================================================
 
 var PROMO_CODES = {
-  "DH180": 180
+  "DH180": 180,
+  "NOAM110": 110
 };
 
 // The localStorage key used to track redeemed promo codes.
@@ -223,12 +208,6 @@ var isAnimating = false;
 
 var currentPromo = { code: null, amount: null };
 
-// Cloud sync
-var db = null;
-var cardId = null;
-var pendingNewCardId = null;
-var pendingCarryOver = 0;
-
 // ============================================================
 // SHAPE RENDERING
 // ============================================================
@@ -337,299 +316,6 @@ function renderSVGSlots(shapeIndices) {
   }
 }
 
-// Card backup modal DOM references
-var cardBackupOverlayEl = document.getElementById("card-backup-overlay");
-var cardBackupChoiceViewEl = document.getElementById("card-backup-choice-view");
-var cardBackupChoiceNewBtnEl = document.getElementById("card-backup-choice-new-btn");
-var cardBackupChoiceRestoreEl = document.getElementById("card-backup-choice-restore");
-var cardBackupNewViewEl = document.getElementById("card-backup-new-view");
-var cardBackupRestoreViewEl = document.getElementById("card-backup-restore-view");
-var cardIdDisplayEl = document.getElementById("card-id-display");
-var cardBackupIdDisplayEl = document.getElementById("card-backup-id-display");
-var cardBackupNewDescEl = document.getElementById("card-backup-new-desc");
-var cardBackupGotItBtnEl = document.getElementById("card-backup-gotit-btn");
-var cardBackupCopyBtnEl = document.getElementById("card-backup-copy-btn");
-var cardBackupSwitchRestoreEl = document.getElementById("card-backup-switch-restore");
-var cardBackupRestoreInputEl = document.getElementById("card-backup-restore-input");
-var cardBackupRestoreBtnEl = document.getElementById("card-backup-restore-btn");
-var cardBackupRestoreStatusEl = document.getElementById("card-backup-restore-status");
-var cardBackupSwitchNewEl = document.getElementById("card-backup-switch-new");
-var cardSettingsViewEl = document.getElementById("card-settings-view");
-var cardSettingsIdDisplayEl = document.getElementById("card-settings-id-display");
-var cardSettingsCopyBtnEl = document.getElementById("card-settings-copy-btn");
-var cardSettingsCloseBtnEl = document.getElementById("card-settings-close-btn");
-var cardSettingsSwitchReplaceEl = document.getElementById("card-settings-switch-replace");
-var myCardBtnEl = document.getElementById("my-card-btn");
-var utilityDividerEl = document.getElementById("utility-divider");
-
-function showUtilityIcon(el) {
-  el.classList.remove("hidden");
-  utilityDividerEl.classList.remove("hidden");
-}
-
-// ============================================================
-// FIREBASE / CLOUD SYNC
-// ============================================================
-
-function initFirebase() {
-  if (!FIREBASE_CONFIG.apiKey) return;
-  try {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-  } catch (e) {}
-}
-
-function generateCardId() {
-  var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  var id = "";
-  for (var i = 0; i < 6; i++) {
-    id += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return id;
-}
-
-function getStoredCardId() {
-  try { return localStorage.getItem(CARD_ID_KEY) || null; } catch(e) { return null; }
-}
-
-function storeCardId(id) {
-  try { localStorage.setItem(CARD_ID_KEY, id); } catch(e) {}
-}
-
-function loadFromCloud(id, callback) {
-  if (!db) { callback(null); return; }
-  db.collection("cards").doc(id).get()
-    .then(function(doc) { callback(doc.exists ? doc.data() : null); })
-    .catch(function() { callback(null); });
-}
-
-function saveToCloud(stateData) {
-  if (!db || !cardId) return;
-  var promoData = {};
-  var activePromo = null;
-  try {
-    var raw = localStorage.getItem(PROMO_LOCALSTORAGE_KEY);
-    if (raw) promoData = JSON.parse(raw);
-    activePromo = localStorage.getItem(ACTIVE_PROMO_KEY) || null;
-  } catch(e) {}
-  db.collection("cards").doc(cardId).set({
-    punches: stateData.punches,
-    celebrationPending: stateData.celebrationPending,
-    shapeIndices: stateData.shapeIndices,
-    promos: promoData,
-    activePromo: activePromo
-  }).catch(function() {});
-}
-
-function validateCloudState(data) {
-  var defaults = { punches: 0, celebrationPending: false, shapeIndices: generateShapeIndices() };
-  if (!data) return defaults;
-  if (typeof data.punches !== "number" || !Number.isInteger(data.punches) ||
-      data.punches < 0 || data.punches > TOTAL_PUNCHES) return defaults;
-  if (typeof data.celebrationPending !== "boolean") return defaults;
-  if (!Array.isArray(data.shapeIndices) || data.shapeIndices.length !== TOTAL_PUNCHES) {
-    return { punches: data.punches, celebrationPending: data.celebrationPending, shapeIndices: generateShapeIndices() };
-  }
-  return { punches: data.punches, celebrationPending: data.celebrationPending, shapeIndices: data.shapeIndices.slice() };
-}
-
-// ============================================================
-// CARD BACKUP MODAL
-// ============================================================
-
-function showCardBackupModal(migrationPunches) {
-  cardBackupRestoreInputEl.value = "";
-  cardBackupRestoreBtnEl.disabled = true;
-  cardBackupRestoreStatusEl.className = "status-message hidden";
-
-  if (migrationPunches > 0) {
-    // User has existing punches but no card ID — give them a new code immediately
-    pendingNewCardId = generateCardId();
-    cardBackupIdDisplayEl.textContent = pendingNewCardId;
-    cardBackupNewDescEl.textContent = "יש לכם " + migrationPunches + " ניקובים! שמרו את הקוד כדי שלא תאבדו אותם אף פעם.";
-    showAllViews(cardBackupNewViewEl);
-  } else {
-    // New or returning user — ask first before generating a code
-    showAllViews(cardBackupChoiceViewEl);
-  }
-
-  cardBackupOverlayEl.classList.remove("hidden");
-  appEl.setAttribute("aria-hidden", "true");
-}
-
-function hideCardBackupModal() {
-  cardBackupOverlayEl.classList.add("hidden");
-  appEl.removeAttribute("aria-hidden");
-}
-
-function confirmNewCard() {
-  cardId = pendingNewCardId;
-  storeCardId(cardId);
-  saveToCloud(state);
-  showUtilityIcon(myCardBtnEl);
-  updateCardIdDisplay();
-  hideCardBackupModal();
-}
-
-function handleRestoreCard() {
-  var enteredId = cardBackupRestoreInputEl.value.trim().toUpperCase();
-  if (!enteredId) return;
-
-  cardBackupRestoreBtnEl.disabled = true;
-  cardBackupRestoreStatusEl.textContent = "מחפש...";
-  cardBackupRestoreStatusEl.className = "status-message";
-
-  loadFromCloud(enteredId, function(cloudData) {
-    cardBackupRestoreBtnEl.disabled = false;
-    if (!cloudData) {
-      cardBackupRestoreStatusEl.textContent = "קוד לא נמצא, נסו שוב";
-      cardBackupRestoreStatusEl.className = "status-message error";
-      return;
-    }
-    var restored = validateCloudState(cloudData);
-    cardId = enteredId;
-    storeCardId(cardId);
-    // Restore promo data if present
-    try {
-      if (cloudData.promos) localStorage.setItem(PROMO_LOCALSTORAGE_KEY, JSON.stringify(cloudData.promos));
-      if (cloudData.activePromo) localStorage.setItem(ACTIVE_PROMO_KEY, cloudData.activePromo);
-    } catch(e) {}
-    saveState(restored);
-    renderSVGSlots(state.shapeIndices);
-    render();
-    showUtilityIcon(myCardBtnEl);
-    updateCardIdDisplay();
-    hideCardBackupModal();
-    showToast("הכרטיס שוחזר בהצלחה :)");
-    if (state.celebrationPending) {
-      lockUI();
-      showCelebration();
-    }
-  });
-}
-
-cardBackupChoiceNewBtnEl.addEventListener("click", function() {
-  pendingNewCardId = generateCardId();
-  cardBackupIdDisplayEl.textContent = pendingNewCardId;
-  cardBackupNewDescEl.textContent = "זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.";
-  showAllViews(cardBackupNewViewEl);
-});
-
-cardBackupChoiceRestoreEl.addEventListener("click", function() {
-  showAllViews(cardBackupRestoreViewEl);
-});
-
-cardBackupGotItBtnEl.addEventListener("click", confirmNewCard);
-
-cardBackupCopyBtnEl.addEventListener("click", function() {
-  if (pendingNewCardId) copyCode(pendingNewCardId, cardBackupCopyBtnEl);
-});
-
-cardBackupSwitchRestoreEl.addEventListener("click", function() {
-  cardBackupNewViewEl.classList.add("hidden");
-  cardBackupRestoreViewEl.classList.remove("hidden");
-  cardBackupRestoreInputEl.value = "";
-  cardBackupRestoreStatusEl.className = "status-message hidden";
-  cardBackupRestoreBtnEl.disabled = true;
-});
-
-cardBackupSwitchNewEl.addEventListener("click", function() {
-  if (!pendingNewCardId) {
-    pendingNewCardId = generateCardId();
-    cardBackupIdDisplayEl.textContent = pendingNewCardId;
-    cardBackupNewDescEl.textContent = "זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.";
-  }
-  showAllViews(cardBackupNewViewEl);
-});
-
-cardBackupRestoreInputEl.addEventListener("input", function() {
-  cardBackupRestoreBtnEl.disabled = (cardBackupRestoreInputEl.value.trim().length === 0);
-  if (cardBackupRestoreStatusEl.classList.contains("error")) {
-    cardBackupRestoreStatusEl.className = "status-message hidden";
-  }
-});
-
-cardBackupRestoreBtnEl.addEventListener("click", handleRestoreCard);
-
-cardBackupRestoreInputEl.addEventListener("keydown", function(e) {
-  if (e.key === "Enter" && !cardBackupRestoreBtnEl.disabled) {
-    e.preventDefault();
-    handleRestoreCard();
-  }
-});
-
-function showAllViews(show) {
-  cardBackupChoiceViewEl.classList.add("hidden");
-  cardBackupNewViewEl.classList.add("hidden");
-  cardBackupRestoreViewEl.classList.add("hidden");
-  cardSettingsViewEl.classList.add("hidden");
-  show.classList.remove("hidden");
-}
-
-function updateCardIdDisplay() {
-  if (cardId && cardIdDisplayEl) {
-    cardIdDisplayEl.innerHTML = "הכרטיס שלי: <span dir=\"ltr\">" + cardId + "</span>";
-    cardIdDisplayEl.classList.remove("hidden");
-  }
-}
-
-function showCardSettingsModal() {
-  cardSettingsIdDisplayEl.textContent = cardId;
-  cardBackupRestoreInputEl.value = "";
-  cardBackupRestoreBtnEl.disabled = true;
-  cardBackupRestoreStatusEl.className = "status-message hidden";
-  showAllViews(cardSettingsViewEl);
-  cardBackupOverlayEl.classList.remove("hidden");
-  appEl.setAttribute("aria-hidden", "true");
-}
-
-function copyCode(code, btn) {
-  var origText = btn.textContent;
-  navigator.clipboard.writeText(code).then(function() {
-    btn.textContent = "הועתק!";
-    setTimeout(function() { btn.textContent = origText; }, 1500);
-  }).catch(function() {
-    var ta = document.createElement("textarea");
-    ta.value = code;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-    btn.textContent = "הועתק!";
-    setTimeout(function() { btn.textContent = origText; }, 1500);
-  });
-}
-
-cardSettingsCopyBtnEl.addEventListener("click", function() {
-  copyCode(cardId, cardSettingsCopyBtnEl);
-});
-
-cardSettingsCloseBtnEl.addEventListener("click", hideCardBackupModal);
-
-cardSettingsSwitchReplaceEl.addEventListener("click", function() {
-  cardBackupRestoreInputEl.value = "";
-  cardBackupRestoreBtnEl.disabled = true;
-  cardBackupRestoreStatusEl.className = "status-message hidden";
-  showAllViews(cardBackupRestoreViewEl);
-  // Override "כרטיס חדש" to go back to settings
-  cardBackupSwitchNewEl.textContent = "ביטול";
-  cardBackupSwitchNewEl.onclick = function() {
-    showAllViews(cardSettingsViewEl);
-    cardBackupSwitchNewEl.textContent = "כרטיס חדש";
-    cardBackupSwitchNewEl.onclick = null;
-  };
-});
-
-myCardBtnEl.addEventListener("click", function() {
-  if (cardId) {
-    showCardSettingsModal();
-  } else {
-    showCardBackupModal(state.punches);
-  }
-});
-
 // ============================================================
 // LOCALSTORAGE HELPERS
 // ============================================================
@@ -719,7 +405,7 @@ function loadState() {
 }
 
 /**
- * Save state to localStorage and cloud. Shows a toast on error.
+ * Save state to localStorage. Shows a toast on error.
  */
 function saveState(newState) {
   state = newState;
@@ -728,7 +414,6 @@ function saveState(newState) {
   } catch (e) {
     showToast("לא ניתן לשמור את הכרטיס");
   }
-  saveToCloud(state);
 }
 
 // ============================================================
@@ -750,7 +435,10 @@ function render() {
 
   progressCountEl.textContent = state.punches;
 
-  var maxQuantity = TOTAL_PUNCHES;
+  var maxQuantity = TOTAL_PUNCHES - state.punches;
+  if (maxQuantity < MIN_QUANTITY) {
+    maxQuantity = MIN_QUANTITY;
+  }
   if (quantity > maxQuantity) {
     quantity = maxQuantity;
   }
@@ -892,26 +580,16 @@ function dismissCelebration() {
 
     // Generate new shapes for the new card
     var newIndices = generateShapeIndices();
-    var carryOver = pendingCarryOver;
-    pendingCarryOver = 0;
-
     saveState({ punches: 0, celebrationPending: false, shapeIndices: newIndices });
-    renderSVGSlots(state.shapeIndices);
-    render();
 
-    if (carryOver > 0) {
-      lockUI();
-      animatePunches(0, carryOver, function () {
-        saveState({ punches: carryOver, celebrationPending: false, shapeIndices: newIndices });
-        quantity = 1;
-        unlockUI();
-        showToast("כרטיסיה חדשה עם " + carryOver + " ניקובים :)");
-      });
-    } else {
-      quantity = 1;
-      unlockUI();
-      showToast("כרטיסיה חדשה :)");
-    }
+    // Re-render SVG with new shapes
+    renderSVGSlots(state.shapeIndices);
+
+    quantity = 1;
+    render();
+    unlockUI();
+
+    showToast("כרטיסיה חדשה :)");
   }, 300);
 }
 
@@ -931,7 +609,9 @@ function unlockUI() {
   isAnimating = false;
   codeInputEl.disabled = false;
   updatePunchButtonState();
-  renderStepper(TOTAL_PUNCHES);
+  var maxQuantity = TOTAL_PUNCHES - state.punches;
+  if (maxQuantity < MIN_QUANTITY) maxQuantity = MIN_QUANTITY;
+  renderStepper(maxQuantity);
 }
 
 function handlePunch() {
@@ -944,19 +624,21 @@ function handlePunch() {
     var oldPunches = state.punches;
     var awardedQuantity = quantity;
     var newPunches = oldPunches + awardedQuantity;
-    var carryOver = Math.max(0, newPunches - TOTAL_PUNCHES);
-    var punchesToFill = awardedQuantity - carryOver;
+
+    if (newPunches > TOTAL_PUNCHES) {
+      newPunches = TOTAL_PUNCHES;
+      awardedQuantity = TOTAL_PUNCHES - oldPunches;
+    }
 
     codeInputEl.value = "";
     quantity = 1;
     clearStatusMessage();
     lockUI();
 
-    if (newPunches >= TOTAL_PUNCHES) {
-      pendingCarryOver = carryOver;
+    if (newPunches === TOTAL_PUNCHES) {
       saveState({ punches: 0, celebrationPending: true, shapeIndices: state.shapeIndices });
 
-      animatePunches(oldPunches, punchesToFill, function () {
+      animatePunches(oldPunches, awardedQuantity, function () {
         setTimeout(function () {
           showCelebration();
         }, 500);
@@ -992,15 +674,19 @@ stepperMinusEl.addEventListener("click", function () {
   if (isAnimating) return;
   if (quantity > MIN_QUANTITY) {
     quantity--;
-    renderStepper(TOTAL_PUNCHES);
+    var maxQuantity = TOTAL_PUNCHES - state.punches;
+    if (maxQuantity < MIN_QUANTITY) maxQuantity = MIN_QUANTITY;
+    renderStepper(maxQuantity);
   }
 });
 
 stepperPlusEl.addEventListener("click", function () {
   if (isAnimating) return;
-  if (quantity < TOTAL_PUNCHES) {
+  var maxQuantity = TOTAL_PUNCHES - state.punches;
+  if (maxQuantity < MIN_QUANTITY) maxQuantity = MIN_QUANTITY;
+  if (quantity < maxQuantity) {
     quantity++;
-    renderStepper(TOTAL_PUNCHES);
+    renderStepper(maxQuantity);
   }
 });
 
@@ -1117,7 +803,6 @@ function savePromoRedemption(code, usedAmount) {
       history: current.history.concat([{ used: usedAmount, date: today }])
     };
     localStorage.setItem(PROMO_LOCALSTORAGE_KEY, JSON.stringify(data));
-    saveToCloud(state);
   } catch (e) {
     // ignore
   }
@@ -1338,9 +1023,6 @@ promoNewBtnEl.addEventListener("click", function () {
     return;
   }
 
-  // Initialize Firebase
-  initFirebase();
-
   // Load persisted state
   state = loadState();
 
@@ -1352,29 +1034,7 @@ promoNewBtnEl.addEventListener("click", function () {
   updatePunchButtonState();
 
   // Save state if shapes were newly generated (first load or migration)
-  // (skip cloud save here — card ID not assigned yet)
-  try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state)); } catch(e) {}
-
-  // Card ID / cloud sync
-  cardId = getStoredCardId();
-  if (!cardId) {
-    // Show backup modal (migration if they already have punches)
-    showCardBackupModal(state.punches);
-  } else {
-    showUtilityIcon(myCardBtnEl);
-    updateCardIdDisplay();
-    // Background sync: pull from cloud in case local was cleared or behind
-    loadFromCloud(cardId, function(cloudData) {
-      if (!cloudData || isAnimating || celebrationEl.classList.contains("visible")) return;
-      var cloudState = validateCloudState(cloudData);
-      if (cloudState.punches > state.punches) {
-        state = cloudState;
-        try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state)); } catch(e) {}
-        renderSVGSlots(state.shapeIndices);
-        render();
-      }
-    });
-  }
+  saveState(state);
 
   // Install hint button
   (function() {
@@ -1395,7 +1055,7 @@ promoNewBtnEl.addEventListener("click", function () {
       ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן ואז \"הוסף למסך הבית\" ו\"התקן\""
       : "לחצו על שלוש הנקודות ⋮ למעלה ואז \"הוסף למסך הבית\" ו\"התקן\"";
     textEl.innerHTML = "מומלץ להוריד את האפליקציה למכשיר :)<br><br>" + step;
-    showUtilityIcon(btn);
+    btn.classList.remove("hidden");
 
     btn.addEventListener("click", function() {
       popup.classList.remove("hidden");

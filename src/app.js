@@ -194,6 +194,10 @@ var promoRedeemedUsedEl = document.getElementById("promo-redeemed-used");
 var promoRemainingRowEl = document.getElementById("promo-remaining-row");
 var promoRemainingAmountEl = document.getElementById("promo-remaining-amount");
 var promoNewBtnEl = document.getElementById("promo-new-btn");
+var promoRemoveBtnEl = document.getElementById("promo-remove-btn");
+var promoRemoveConfirmEl = document.getElementById("promo-remove-confirm");
+var promoRemoveConfirmYesEl = document.getElementById("promo-remove-confirm-yes");
+var promoRemoveConfirmNoEl = document.getElementById("promo-remove-confirm-no");
 var promoHistoryEl = document.getElementById("promo-history");
 var promoHistoryListEl = document.getElementById("promo-history-list");
 
@@ -853,9 +857,20 @@ function showActiveCode(code) {
   promoUseAmountEl.max = remaining;
   clearPromoRedeemStatus();
   updatePromoRedeemBtnState();
+  hidePromoRemoveConfirm();
   promoEntryEl.classList.add("hidden");
   promoResultEl.classList.remove("hidden");
   promoRedeemedEl.classList.add("hidden");
+}
+
+function showPromoRemoveConfirm() {
+  promoRemoveBtnEl.classList.add("hidden");
+  promoRemoveConfirmEl.classList.remove("hidden");
+}
+
+function hidePromoRemoveConfirm() {
+  promoRemoveBtnEl.classList.remove("hidden");
+  promoRemoveConfirmEl.classList.add("hidden");
 }
 
 function renderPromoHistory() {
@@ -1007,6 +1022,14 @@ promoNewBtnEl.addEventListener("click", function () {
   } else {
     resetPromoTab();
   }
+});
+
+promoRemoveBtnEl.addEventListener("click", showPromoRemoveConfirm);
+
+promoRemoveConfirmNoEl.addEventListener("click", hidePromoRemoveConfirm);
+
+promoRemoveConfirmYesEl.addEventListener("click", function () {
+  resetPromoTab();
 });
 
 // ============================================================

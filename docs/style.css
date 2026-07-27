@@ -775,6 +775,52 @@ body.celebration-active {
   gap: 8px;
 }
 
+/* Remove active code (link-style, low visual weight) */
+.promo-remove-btn {
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  color: var(--gray-dark);
+  font-family: var(--font-stack);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.promo-remove-btn:hover,
+.promo-remove-btn:focus-visible {
+  color: var(--error-red);
+}
+
+.promo-remove-confirm {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--gray-dark);
+}
+
+.promo-remove-confirm-btn {
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  font-family: var(--font-stack);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.promo-remove-confirm-yes {
+  color: var(--error-red);
+  font-weight: 700;
+}
+
+.promo-remove-confirm-no {
+  color: var(--gray-dark);
+}
+
 /* Redeemed confirmation panel */
 .promo-redeemed {
   position: relative;

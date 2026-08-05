@@ -368,6 +368,7 @@ body {
 .social-link--maps     { color: #EA4335; }
 .social-link--instagram { color: #E1306C; }
 .social-link--facebook  { color: #1877F2; }
+.social-link--website   { color: #205082; }
 
 .social-link:hover,
 .social-link:focus-visible {

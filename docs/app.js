@@ -36,25 +36,19 @@ var LOCALSTORAGE_KEY = "amali_punch_card";
 
 
 // ============================================================
-// PROMO CODE CONFIGURATION — Add gift codes here
-// Format: "CODE": amount_in_NIS
-// Example: "GIFT150": 150
+// GIFT CARDS — codes and balances live in Firestore (collection
+// "giftCodes"), managed by staff at staff.html. Nothing is
+// hardcoded here; the customer app can only look up a code it knows.
 // ============================================================
 
-var PROMO_CODES = {
-  "DH180": 180,
-  "NOAM110": 110,
-  "AMAL300-N": 300,
-  "AML100-L": 100,
-  "GFU200": 200
-};
+// The localStorage key for the list of gift codes this customer saved.
+var GIFT_CODES_KEY = "amali_gift_codes";
 
-// The localStorage key used to track redeemed promo codes.
+// Legacy keys from the old hardcoded system (read once to carry codes over).
 var PROMO_LOCALSTORAGE_KEY = "amali_used_promos";
-
-// The localStorage key used to track the currently active promo code.
 var ACTIVE_PROMO_KEY = "amali_active_promo";
 
+var GIFT_CODE_RE = /^[A-Z0-9-]{4,24}$/;
 
 // ============================================================
 // SHAPE DEFINITIONS — 16 geometric shapes inspired by the brand
@@ -196,7 +190,7 @@ var tabPromoEl = document.getElementById("tab-promo");
 var punchSectionEl = document.getElementById("punch-section");
 var promoSectionEl = document.getElementById("promo-section");
 
-// Promo elements
+// Promo (gift card) elements
 var promoInputEl = document.getElementById("promo-input");
 var promoCheckBtnEl = document.getElementById("promo-check-btn");
 var promoStatusEl = document.getElementById("promo-status");
@@ -204,21 +198,15 @@ var promoEntryEl = document.getElementById("promo-entry");
 var promoResultEl = document.getElementById("promo-result");
 var promoAmountEl = document.getElementById("promo-amount");
 var promoActiveCodeNameEl = document.getElementById("promo-active-code-name");
-var promoUseAmountEl = document.getElementById("promo-use-amount");
-var promoRedeemBtnEl = document.getElementById("promo-redeem-btn");
-var promoRedeemStatusEl = document.getElementById("promo-redeem-status");
-var promoRedeemedEl = document.getElementById("promo-redeemed");
-var promoRedeemedUsedEl = document.getElementById("promo-redeemed-used");
-var promoRemainingRowEl = document.getElementById("promo-remaining-row");
-var promoRemainingAmountEl = document.getElementById("promo-remaining-amount");
-var promoNewBtnEl = document.getElementById("promo-new-btn");
+var promoOfAmountEl = document.getElementById("promo-of-amount");
+var promoUsageEl = document.getElementById("promo-usage");
+var promoBackBtnEl = document.getElementById("promo-back-btn");
 var promoRemoveBtnEl = document.getElementById("promo-remove-btn");
 var promoRemoveConfirmEl = document.getElementById("promo-remove-confirm");
 var promoRemoveConfirmYesEl = document.getElementById("promo-remove-confirm-yes");
 var promoRemoveConfirmNoEl = document.getElementById("promo-remove-confirm-no");
 var promoHistoryEl = document.getElementById("promo-history");
 var promoHistoryListEl = document.getElementById("promo-history-list");
-
 // ============================================================
 // STATE
 // ============================================================
@@ -413,6 +401,7 @@ function loadFromCloud(id, callback) {
 
 function saveToCloud(stateData) {
   if (!db || !cardId) return;
+  // promos/activePromo: legacy data kept as-is so old balances stay importable.
   var promoData = {};
   var activePromo = null;
   try {
@@ -425,7 +414,8 @@ function saveToCloud(stateData) {
     celebrationPending: stateData.celebrationPending,
     shapeIndices: stateData.shapeIndices,
     promos: promoData,
-    activePromo: activePromo
+    activePromo: activePromo,
+    giftCodes: loadSavedGiftCodes()
   }).catch(function() {});
 }
 
@@ -497,11 +487,21 @@ function handleRestoreCard() {
     var restored = validateCloudState(cloudData);
     cardId = enteredId;
     storeCardId(cardId);
-    // Restore promo data if present
+    // Restore gift card data if present
     try {
       if (cloudData.promos) localStorage.setItem(PROMO_LOCALSTORAGE_KEY, JSON.stringify(cloudData.promos));
       if (cloudData.activePromo) localStorage.setItem(ACTIVE_PROMO_KEY, cloudData.activePromo);
     } catch(e) {}
+    if (Array.isArray(cloudData.giftCodes)) {
+      var mergedCodes = loadSavedGiftCodes();
+      cloudData.giftCodes.forEach(function (c) {
+        if (typeof c === "string" && GIFT_CODE_RE.test(c) && mergedCodes.indexOf(c) === -1) mergedCodes.push(c);
+      });
+      storeSavedGiftCodes(mergedCodes);
+    } else {
+      try { localStorage.removeItem(GIFT_CODES_KEY); } catch(e) {}
+      migrateLegacyGiftCodes();
+    }
     saveState(restored);
     renderSVGSlots(state.shapeIndices);
     render();
@@ -1070,12 +1070,7 @@ function switchTab(tab) {
     tabPunchEl.classList.remove("tab-btn--active");
     promoSectionEl.classList.remove("hidden");
     punchSectionEl.classList.add("hidden");
-    // Restore active code if entry form is showing
-    var activeCode = getActivePromo();
-    if (activeCode && !promoEntryEl.classList.contains("hidden")) {
-      showActiveCode(activeCode);
-    }
-    renderPromoHistory();
+    if (promoResultEl.classList.contains("hidden")) renderPromoHistory();
   }
 }
 
@@ -1083,52 +1078,95 @@ tabPunchEl.addEventListener("click", function () { switchTab("punch"); });
 tabPromoEl.addEventListener("click", function () { switchTab("promo"); });
 
 // ============================================================
-// PROMO CODE LOGIC
+// GIFT CARD LOGIC (read-only for customers — the barista redeems)
 // ============================================================
 
-function getActivePromo() {
-  try { return localStorage.getItem(ACTIVE_PROMO_KEY) || null; } catch(e) { return null; }
-}
-function setActivePromo(code) {
-  try { localStorage.setItem(ACTIVE_PROMO_KEY, code); } catch(e) {}
-}
-function clearActivePromo() {
-  try { localStorage.removeItem(ACTIVE_PROMO_KEY); } catch(e) {}
+function normalizeGiftCode(raw) {
+  return String(raw || "").toUpperCase().replace(/[\s_]+/g, "").replace(/[–—]/g, "-");
 }
 
-function loadPromoData() {
-  try {
-    var raw = localStorage.getItem(PROMO_LOCALSTORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch (e) {
-    return {};
+// "K7QM3XRP" typed without the hyphen also finds "K7QM-3XRP".
+function giftCodeCandidates(raw) {
+  var code = normalizeGiftCode(raw);
+  var list = [code];
+  if (code.indexOf("-") === -1 && code.length === 8) {
+    list.push(code.slice(0, 4) + "-" + code.slice(4));
   }
+  return list.filter(function (c) { return GIFT_CODE_RE.test(c); });
 }
 
-function getPromoRemaining(code) {
-  var data = loadPromoData();
-  if (data[code] !== undefined) {
-    return data[code].remaining;
-  }
-  return PROMO_CODES[code]; // never used yet — full amount
-}
-
-function savePromoRedemption(code, usedAmount) {
+function loadSavedGiftCodes() {
   try {
-    var data = loadPromoData();
-    var current = data[code] || { remaining: PROMO_CODES[code], history: [] };
-    var newRemaining = current.remaining - usedAmount;
-    var today = new Date().toISOString().split("T")[0];
-    data[code] = {
-      remaining: newRemaining,
-      history: current.history.concat([{ used: usedAmount, date: today }])
-    };
-    localStorage.setItem(PROMO_LOCALSTORAGE_KEY, JSON.stringify(data));
+    var raw = localStorage.getItem(GIFT_CODES_KEY);
+    var list = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(list)) {
+      return list.filter(function (c) { return typeof c === "string" && GIFT_CODE_RE.test(c); });
+    }
+  } catch (e) {}
+  return [];
+}
+
+function storeSavedGiftCodes(list) {
+  try { localStorage.setItem(GIFT_CODES_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+function addSavedGiftCode(code) {
+  var list = loadSavedGiftCodes();
+  if (list.indexOf(code) === -1) {
+    list.unshift(code);
+    storeSavedGiftCodes(list);
     saveToCloud(state);
-  } catch (e) {
-    // ignore
   }
+}
+
+function removeSavedGiftCode(code) {
+  storeSavedGiftCodes(loadSavedGiftCodes().filter(function (c) { return c !== code; }));
+  saveToCloud(state);
+}
+
+// One-time: carry over codes this device used under the old hardcoded system.
+function migrateLegacyGiftCodes() {
+  try {
+    if (localStorage.getItem(GIFT_CODES_KEY) !== null) return;
+    var list = [];
+    var raw = localStorage.getItem(PROMO_LOCALSTORAGE_KEY);
+    var legacy = raw ? JSON.parse(raw) : {};
+    Object.keys(legacy || {}).forEach(function (code) {
+      var c = normalizeGiftCode(code);
+      if (GIFT_CODE_RE.test(c) && list.indexOf(c) === -1) list.push(c);
+    });
+    var active = normalizeGiftCode(localStorage.getItem(ACTIVE_PROMO_KEY));
+    if (GIFT_CODE_RE.test(active) && list.indexOf(active) === -1) list.unshift(active);
+    storeSavedGiftCodes(list);
+  } catch (e) {}
+}
+
+// Look up a code in Firestore. callback(err, data|null)
+function fetchGiftCode(raw, callback) {
+  if (!db) { callback(new Error("offline"), null); return; }
+  var cands = giftCodeCandidates(raw);
+  function next(i) {
+    if (i >= cands.length) { callback(null, null); return; }
+    db.collection("giftCodes").doc(cands[i]).get()
+      .then(function (doc) {
+        if (doc.exists) {
+          var d = doc.data();
+          d.id = doc.id;
+          callback(null, d);
+        } else {
+          next(i + 1);
+        }
+      })
+      .catch(function (err) { callback(err, null); });
+  }
+  next(0);
+}
+
+function formatGiftDate(ms) {
+  if (typeof ms !== "number") return "";
+  var d = new Date(ms);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit" });
 }
 
 function showPromoStatus(text, type) {
@@ -1141,44 +1179,8 @@ function clearPromoStatus() {
   promoStatusEl.className = "status-message hidden";
 }
 
-function showPromoRedeemStatus(text, type) {
-  promoRedeemStatusEl.textContent = text;
-  promoRedeemStatusEl.className = "status-message " + type;
-}
-
-function clearPromoRedeemStatus() {
-  promoRedeemStatusEl.textContent = "";
-  promoRedeemStatusEl.className = "status-message hidden";
-}
-
 function updatePromoCheckBtnState() {
-  promoCheckBtnEl.disabled = (promoInputEl.value.length === 0);
-}
-
-function updatePromoRedeemBtnState() {
-  var val = promoUseAmountEl.value.trim();
-  var num = parseFloat(val);
-  promoRedeemBtnEl.disabled = (!val || isNaN(num) || num <= 0);
-}
-
-function showActiveCode(code) {
-  var remaining = getPromoRemaining(code);
-  if (remaining <= 0) {
-    clearActivePromo();
-    resetPromoTab();
-    return;
-  }
-  currentPromo = { code: code, amount: remaining };
-  promoAmountEl.textContent = remaining + " ₪";
-  promoActiveCodeNameEl.textContent = code;
-  promoUseAmountEl.value = "";
-  promoUseAmountEl.max = remaining;
-  clearPromoRedeemStatus();
-  updatePromoRedeemBtnState();
-  hidePromoRemoveConfirm();
-  promoEntryEl.classList.add("hidden");
-  promoResultEl.classList.remove("hidden");
-  promoRedeemedEl.classList.add("hidden");
+  promoCheckBtnEl.disabled = giftCodeCandidates(promoInputEl.value).length === 0;
 }
 
 function showPromoRemoveConfirm() {
@@ -1191,110 +1193,113 @@ function hidePromoRemoveConfirm() {
   promoRemoveConfirmEl.classList.add("hidden");
 }
 
-function renderPromoHistory() {
-  var data = loadPromoData();
-  var fullyUsed = [];
-  Object.keys(data).forEach(function(code) {
-    if (data[code].remaining === 0) {
-      fullyUsed.push({ code: code, history: data[code].history });
-    }
+function showGiftCard(data) {
+  currentPromo = { code: data.id, amount: data.remaining };
+  var cancelled = data.active === false;
+  promoActiveCodeNameEl.textContent = data.id;
+  promoAmountEl.textContent = cancelled ? "בוטל" : data.remaining + " ₪";
+  promoResultEl.classList.toggle("promo-result--empty", cancelled || data.remaining <= 0);
+  promoOfAmountEl.textContent = data.remaining <= 0 && !cancelled
+    ? "נוצל במלואו · מתוך " + data.amount + " ₪"
+    : "מתוך " + data.amount + " ₪";
+
+  promoUsageEl.innerHTML = "";
+  var history = Array.isArray(data.history) ? data.history.slice().reverse().slice(0, 6) : [];
+  history.forEach(function (h) {
+    var row = document.createElement("div");
+    row.className = "promo-usage-row";
+    var a = document.createElement("span");
+    a.textContent = "−" + h.used + " ₪";
+    var b = document.createElement("span");
+    b.textContent = formatGiftDate(h.at);
+    row.appendChild(a);
+    row.appendChild(b);
+    promoUsageEl.appendChild(row);
   });
-  if (fullyUsed.length === 0) {
+  promoUsageEl.classList.toggle("hidden", history.length === 0);
+
+  hidePromoRemoveConfirm();
+  promoEntryEl.classList.add("hidden");
+  promoHistoryEl.classList.add("hidden");
+  promoResultEl.classList.remove("hidden");
+}
+
+function handlePromoCheck() {
+  var entered = promoInputEl.value;
+  if (giftCodeCandidates(entered).length === 0) return;
+
+  promoCheckBtnEl.disabled = true;
+  showPromoStatus("בודק...", "");
+
+  fetchGiftCode(entered, function (err, data) {
+    updatePromoCheckBtnState();
+    if (err) {
+      showPromoStatus("אין חיבור כרגע, נסו שוב", "error");
+      return;
+    }
+    if (!data) {
+      promoInputEl.classList.add("shake");
+      showPromoStatus("קוד לא תקף", "error");
+      return;
+    }
+    promoInputEl.value = "";
+    clearPromoStatus();
+    updatePromoCheckBtnState();
+    addSavedGiftCode(data.id);
+    showGiftCard(data);
+  });
+}
+
+// List of this customer's saved gift cards with live balances.
+function renderPromoHistory() {
+  var list = loadSavedGiftCodes();
+  if (list.length === 0 || !db) {
     promoHistoryEl.classList.add("hidden");
     return;
   }
   promoHistoryEl.classList.remove("hidden");
   promoHistoryListEl.innerHTML = "";
-  fullyUsed.forEach(function(item) {
-    var total = item.history.reduce(function(sum, h) { return sum + h.used; }, 0);
-    var lastDate = item.history.length > 0 ? item.history[item.history.length - 1].date : "";
-    var row = document.createElement("div");
-    row.className = "promo-history-row";
-    row.innerHTML =
-      '<span class="promo-history-code">' + item.code + '</span>' +
-      '<span class="promo-history-info">' + total + ' ₪ · ' + lastDate + '</span>';
+
+  list.forEach(function (code) {
+    var row = document.createElement("button");
+    row.type = "button";
+    row.className = "promo-history-row promo-card-row";
+    var codeEl = document.createElement("span");
+    codeEl.className = "promo-history-code";
+    codeEl.dir = "ltr";
+    codeEl.textContent = code;
+    var info = document.createElement("span");
+    info.className = "promo-history-info";
+    info.textContent = "…";
+    row.appendChild(codeEl);
+    row.appendChild(info);
     promoHistoryListEl.appendChild(row);
+
+    fetchGiftCode(code, function (err, data) {
+      if (err) { info.textContent = ""; return; }
+      if (!data) {
+        // No longer exists — drop it quietly.
+        row.remove();
+        removeSavedGiftCode(code);
+        if (!promoHistoryListEl.children.length) promoHistoryEl.classList.add("hidden");
+        return;
+      }
+      var used = data.active === false || data.remaining <= 0;
+      row.classList.toggle("promo-card-row--used", used);
+      info.textContent = data.active === false ? "בוטל" : data.remaining + " ₪";
+      row.addEventListener("click", function () { showGiftCard(data); });
+    });
   });
 }
 
-function handlePromoCheck() {
-  var enteredCode = promoInputEl.value.trim().toUpperCase();
-  if (!enteredCode) return;
-
-  if (PROMO_CODES[enteredCode] === undefined) {
-    promoInputEl.classList.add("shake");
-    showPromoStatus("קוד לא תקף", "error");
-    promoInputEl.value = "";
-    updatePromoCheckBtnState();
-    return;
-  }
-
-  var remaining = getPromoRemaining(enteredCode);
-
-  if (remaining <= 0) {
-    promoInputEl.classList.add("shake");
-    showPromoStatus("כרטיס המתנה אזל", "error");
-    promoInputEl.value = "";
-    updatePromoCheckBtnState();
-    return;
-  }
-
-  setActivePromo(enteredCode);
-  promoInputEl.value = "";
-  clearPromoStatus();
-  showActiveCode(enteredCode);
-}
-
-function handlePromoRedeem() {
-  if (!currentPromo.code) return;
-
-  var useAmount = Math.round(parseFloat(promoUseAmountEl.value));
-
-  if (isNaN(useAmount) || useAmount <= 0) {
-    showPromoRedeemStatus("הכניסו סכום תקין", "error");
-    return;
-  }
-
-  if (useAmount > currentPromo.amount) {
-    showPromoRedeemStatus("הסכום גבוה מהיתרה (" + currentPromo.amount + " ₪)", "error");
-    return;
-  }
-
-  var redeemedCode = currentPromo.code;
-  savePromoRedemption(redeemedCode, useAmount);
-  var remaining = currentPromo.amount - useAmount;
-
-  promoRedeemedUsedEl.textContent = useAmount + " ₪";
-
-  if (remaining > 0) {
-    promoRemainingAmountEl.textContent = remaining + " ₪";
-    promoRemainingRowEl.classList.remove("hidden");
-    promoNewBtnEl.textContent = "מימוש נוסף";
-    currentPromo.amount = remaining;
-  } else {
-    promoRemainingRowEl.classList.add("hidden");
-    promoNewBtnEl.textContent = "סגור";
-    clearActivePromo();
-    currentPromo = { code: null, amount: null };
-    renderPromoHistory();
-  }
-
-  promoResultEl.classList.add("hidden");
-  promoRedeemedEl.classList.remove("hidden");
-}
-
 function resetPromoTab() {
-  clearActivePromo();
   currentPromo = { code: null, amount: null };
   promoInputEl.value = "";
-  promoUseAmountEl.value = "";
   clearPromoStatus();
-  clearPromoRedeemStatus();
+  hidePromoRemoveConfirm();
   promoEntryEl.classList.remove("hidden");
   promoResultEl.classList.add("hidden");
-  promoRedeemedEl.classList.add("hidden");
   updatePromoCheckBtnState();
-  updatePromoRedeemBtnState();
   renderPromoHistory();
 }
 
@@ -1308,7 +1313,7 @@ promoCheckBtnEl.addEventListener("click", function () {
 });
 
 promoInputEl.addEventListener("keydown", function (e) {
-  if (e.key === "Enter" && promoInputEl.value.length > 0) {
+  if (e.key === "Enter" && !promoCheckBtnEl.disabled) {
     e.preventDefault();
     handlePromoCheck();
   }
@@ -1318,37 +1323,32 @@ promoInputEl.addEventListener("animationend", function () {
   promoInputEl.classList.remove("shake");
 });
 
-promoUseAmountEl.addEventListener("input", function () {
-  updatePromoRedeemBtnState();
-  if (promoRedeemStatusEl.classList.contains("error")) clearPromoRedeemStatus();
-});
-
-promoUseAmountEl.addEventListener("keydown", function (e) {
-  if (e.key === "Enter" && !promoRedeemBtnEl.disabled) {
-    e.preventDefault();
-    handlePromoRedeem();
-  }
-});
-
-promoRedeemBtnEl.addEventListener("click", handlePromoRedeem);
-
-promoNewBtnEl.addEventListener("click", function () {
-  promoRedeemedEl.classList.add("hidden");
-  var activeCode = getActivePromo();
-  if (activeCode) {
-    showActiveCode(activeCode);
-  } else {
-    resetPromoTab();
-  }
-});
+promoBackBtnEl.addEventListener("click", resetPromoTab);
 
 promoRemoveBtnEl.addEventListener("click", showPromoRemoveConfirm);
 
 promoRemoveConfirmNoEl.addEventListener("click", hidePromoRemoveConfirm);
 
 promoRemoveConfirmYesEl.addEventListener("click", function () {
+  if (currentPromo.code) removeSavedGiftCode(currentPromo.code);
   resetPromoTab();
 });
+
+// Opened from a shared link: ?gift=CODE
+function openGiftFromUrl() {
+  var match = /[?&]gift=([^&#]+)/.exec(window.location.search);
+  if (!match) return;
+  var code = "";
+  try { code = decodeURIComponent(match[1]); } catch (e) { return; }
+  try {
+    window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+  } catch (e) {}
+  if (giftCodeCandidates(code).length === 0) return;
+  switchTab("promo");
+  promoInputEl.value = normalizeGiftCode(code);
+  updatePromoCheckBtnState();
+  handlePromoCheck();
+}
 
 // ============================================================
 // INITIALIZATION
@@ -1367,6 +1367,11 @@ promoRemoveConfirmYesEl.addEventListener("click", function () {
 
   // Initialize Firebase
   initFirebase();
+
+  // Gift cards: carry over codes from the old system, open ?gift= links
+  migrateLegacyGiftCodes();
+  updatePromoCheckBtnState();
+  openGiftFromUrl();
 
   // Load persisted state
   state = loadState();

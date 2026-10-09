@@ -1207,3 +1207,87 @@ body.celebration-active {
 
 
 
+
+/* ============================================================
+   20. GIFT CARDS (balance view — redemption happens at staff.html)
+   ============================================================ */
+
+.promo-my-cards {
+  margin-top: 24px;
+  padding-top: 0;
+  border-top: none;
+}
+
+.promo-card-row {
+  width: 100%;
+  border: none;
+  font-family: var(--font-stack);
+  color: var(--brand-blue);
+  cursor: pointer;
+  opacity: 1;
+  text-align: right;
+}
+
+.promo-card-row .promo-history-code {
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.promo-card-row .promo-history-info {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--success-green);
+}
+
+.promo-card-row--used {
+  opacity: 0.55;
+}
+
+.promo-card-row--used .promo-history-code {
+  text-decoration: line-through;
+}
+
+.promo-card-row--used .promo-history-info {
+  color: var(--gray-dark);
+}
+
+.promo-of-amount {
+  font-size: 0.9rem;
+  color: var(--success-green);
+  opacity: 0.75;
+}
+
+.promo-how-to {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  color: var(--brand-blue);
+}
+
+.promo-usage {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--brand-blue);
+}
+
+.promo-usage-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(32, 80, 130, 0.08);
+}
+
+.promo-usage-row:last-child {
+  border-bottom: none;
+}
+
+.promo-result--empty {
+  border-color: var(--gray-dark);
+}
+
+.promo-result--empty .promo-amount,
+.promo-result--empty .promo-balance-label,
+.promo-result--empty .promo-of-amount {
+  color: var(--gray-dark);
+}

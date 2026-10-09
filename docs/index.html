@@ -87,8 +87,14 @@
 
     </div>
 
-    <!-- Promo section -->
+    <!-- Promo section (gift cards) -->
     <div id="promo-section" class="hidden">
+
+      <!-- My saved gift cards -->
+      <div id="promo-history" class="promo-history promo-my-cards hidden">
+        <p class="promo-history-title">כרטיסי המתנה שלי</p>
+        <div id="promo-history-list"></div>
+      </div>
 
       <!-- Entry state -->
       <div id="promo-entry">
@@ -103,71 +109,29 @@
             placeholder="קוד מתנה"
             aria-label="הזינו קוד מתנה"
             autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
           >
-          <button type="button" id="promo-check-btn" class="punch-btn" disabled>בדיקה</button>
+          <button type="button" id="promo-check-btn" class="punch-btn" disabled>בדיקת יתרה</button>
           <div id="promo-status" class="status-message hidden" role="status" aria-live="polite"></div>
         </section>
       </div>
 
-      <!-- Valid code result -->
+      <!-- Balance of one gift card -->
       <div id="promo-result" class="promo-result hidden">
-        <p class="promo-balance-label">יתרה — <span id="promo-active-code-name"></span></p>
+        <p class="promo-balance-label">יתרה — <span id="promo-active-code-name" dir="ltr"></span></p>
         <div class="promo-amount" id="promo-amount"></div>
-        <div class="promo-use-section">
-          <p class="quantity-label">כמה להשתמש? (₪)</p>
-          <input
-            type="number"
-            id="promo-use-amount"
-            class="code-input"
-            dir="ltr"
-            inputmode="numeric"
-            placeholder="סכום"
-            min="1"
-            autocomplete="off"
-          >
-        </div>
-        <button type="button" id="promo-redeem-btn" class="punch-btn promo-action-btn" disabled>מימוש</button>
-        <div id="promo-redeem-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        <p class="promo-of-amount" id="promo-of-amount"></p>
+        <p class="promo-how-to">למימוש — אמרו את הקוד לבריסטה בקופה :)</p>
+        <div class="promo-usage hidden" id="promo-usage"></div>
 
-        <button type="button" id="promo-remove-btn" class="promo-remove-btn">הסר קוד</button>
+        <button type="button" id="promo-back-btn" class="punch-btn promo-action-btn">חזרה</button>
+        <button type="button" id="promo-remove-btn" class="promo-remove-btn">הסרה מהרשימה שלי</button>
         <div id="promo-remove-confirm" class="promo-remove-confirm hidden">
           <span class="promo-remove-confirm-text">בטוח?</span>
           <button type="button" id="promo-remove-confirm-yes" class="promo-remove-confirm-btn promo-remove-confirm-yes">כן, הסר</button>
           <button type="button" id="promo-remove-confirm-no" class="promo-remove-confirm-btn promo-remove-confirm-no">ביטול</button>
         </div>
-      </div>
-
-      <!-- Redeemed confirmation (barista sees this) -->
-      <div id="promo-redeemed" class="promo-redeemed hidden">
-        <div class="promo-confetti-wrap">
-          <div class="pgc pgc-diamond"></div>
-          <div class="pgc pgc-circle"></div>
-          <div class="pgc pgc-square"></div>
-          <div class="pgc pgc-diamond"></div>
-          <div class="pgc pgc-circle"></div>
-          <div class="pgc pgc-hexagon"></div>
-          <div class="pgc pgc-diamond"></div>
-          <div class="pgc pgc-circle"></div>
-          <div class="pgc pgc-square"></div>
-          <div class="pgc pgc-hexagon"></div>
-          <div class="pgc pgc-diamond"></div>
-          <div class="pgc pgc-circle"></div>
-        </div>
-        <div class="promo-check-icon">✓</div>
-        <div class="promo-redeemed-used" id="promo-redeemed-used"></div>
-        <p class="promo-redeemed-label">מומש בהצלחה</p>
-        <p class="promo-gift-tagline">כיף לקבל מתנה :)</p>
-        <div class="promo-remaining-row" id="promo-remaining-row">
-          <span class="promo-remaining-label">נותר בכרטיס:</span>
-          <span class="promo-remaining-amount" id="promo-remaining-amount"></span>
-        </div>
-        <button type="button" id="promo-new-btn" class="punch-btn promo-action-btn">מימוש נוסף</button>
-      </div>
-
-      <!-- History: fully used codes -->
-      <div id="promo-history" class="promo-history hidden">
-        <p class="promo-history-title">נוצל במלואו</p>
-        <div id="promo-history-list"></div>
       </div>
 
     </div>

@@ -45,7 +45,8 @@ var PROMO_CODES = {
   "DH180": 180,
   "NOAM110": 110,
   "AMAL300-N": 300,
-  "AML100-L": 100
+  "AML100-L": 100,
+  "GFU200": 200
 };
 
 // The localStorage key used to track redeemed promo codes.

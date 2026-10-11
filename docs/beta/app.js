@@ -186,11 +186,17 @@ var celebrationCloseEl = document.getElementById("celebration-close");
 var cardSvgEl = document.querySelector(".card-svg");
 var slotGroups = []; // populated by renderSVGSlots
 
-// Tab elements
-var tabPunchEl = document.getElementById("tab-punch");
-var tabPromoEl = document.getElementById("tab-promo");
+// Sections (one screen, no tabs)
 var punchSectionEl = document.getElementById("punch-section");
 var promoSectionEl = document.getElementById("promo-section");
+var promoAddBtnEl = document.getElementById("promo-add-btn");
+var moreBtnEl = document.getElementById("more-btn");
+var moreGoogleBtnEl = document.getElementById("more-google-btn");
+var moreInstallBtnEl = document.getElementById("more-install-btn");
+var bannerEl = document.getElementById("app-banner");
+var bannerTitleEl = document.getElementById("app-banner-title");
+var bannerBtnEl = document.getElementById("app-banner-btn");
+var bannerCloseEl = document.getElementById("app-banner-close");
 
 // Promo (gift card) elements
 var promoInputEl = document.getElementById("promo-input");
@@ -360,9 +366,9 @@ var cardSettingsSwitchReplaceEl = document.getElementById("card-settings-switch-
 var myCardBtnEl = document.getElementById("my-card-btn");
 var utilityDividerEl = document.getElementById("utility-divider");
 
+// Footer icons moved into the "עוד" menu; kept as a no-op for old call sites.
 function showUtilityIcon(el) {
-  el.classList.remove("hidden");
-  utilityDividerEl.classList.remove("hidden");
+  if (el) el.classList.remove("hidden");
 }
 
 // ============================================================
@@ -577,10 +583,26 @@ function showAllViews(show) {
 }
 
 function updateCardIdDisplay() {
-  if (cardId && cardIdDisplayEl) {
-    cardIdDisplayEl.innerHTML = "הכרטיס שלי: <span dir=\"ltr\">" + cardId + "</span>";
-    cardIdDisplayEl.classList.remove("hidden");
-  }
+  if (cardId) cardSettingsIdDisplayEl.textContent = cardId;
+}
+
+// Every card gets a backup ID automatically (no popup). The ID is the same
+// 6-character code customers already know; it is shown in the "עוד" menu.
+function ensureCardId() {
+  if (cardId) return;
+  var id = generateCardId();
+  cardId = id;
+  storeCardId(id);
+  updateCardIdDisplay();
+  saveToCloud(state);
+  // Extremely unlikely clash with an existing card: pick another ID.
+  loadFromCloud(id, function (existing) {
+    if (!existing || cardId !== id) return;
+    if (existing.punches === state.punches && JSON.stringify(existing.shapeIndices) === JSON.stringify(state.shapeIndices)) return;
+    cardId = null;
+    try { localStorage.removeItem(CARD_ID_KEY); } catch (e) {}
+    ensureCardId();
+  });
 }
 
 function showCardSettingsModal() {
@@ -632,12 +654,9 @@ cardSettingsSwitchReplaceEl.addEventListener("click", function() {
   };
 });
 
-myCardBtnEl.addEventListener("click", function() {
-  if (cardId) {
-    showCardSettingsModal();
-  } else {
-    showCardBackupModal(state.punches);
-  }
+moreBtnEl.addEventListener("click", function() {
+  ensureCardId();
+  showCardSettingsModal();
 });
 
 // ============================================================
@@ -739,6 +758,7 @@ function saveState(newState) {
     showToast("לא ניתן לשמור את הכרטיס");
   }
   saveToCloud(state);
+  updateBanner();
 }
 
 // ============================================================
@@ -1111,23 +1131,19 @@ window.addEventListener("storage", function (e) {
 // TAB SWITCHING
 // ============================================================
 
+// One screen now; "promo" just brings the gift cards into view.
 function switchTab(tab) {
-  if (tab === "punch") {
-    tabPunchEl.classList.add("tab-btn--active");
-    tabPromoEl.classList.remove("tab-btn--active");
-    punchSectionEl.classList.remove("hidden");
-    promoSectionEl.classList.add("hidden");
-  } else {
-    tabPromoEl.classList.add("tab-btn--active");
-    tabPunchEl.classList.remove("tab-btn--active");
-    promoSectionEl.classList.remove("hidden");
-    punchSectionEl.classList.add("hidden");
+  if (tab === "promo") {
+    try { promoSectionEl.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {}
     if (promoResultEl.classList.contains("hidden")) renderPromoHistory();
   }
 }
 
-tabPunchEl.addEventListener("click", function () { switchTab("punch"); });
-tabPromoEl.addEventListener("click", function () { switchTab("promo"); });
+promoAddBtnEl.addEventListener("click", function () {
+  promoAddBtnEl.classList.add("hidden");
+  promoEntryEl.classList.remove("hidden");
+  promoInputEl.focus();
+});
 
 // ============================================================
 // GIFT CARD LOGIC (read-only for customers — the barista redeems)
@@ -1302,6 +1318,7 @@ function renderGiftCard(data) {
 
   hidePromoRemoveConfirm();
   promoEntryEl.classList.add("hidden");
+  promoAddBtnEl.classList.add("hidden");
   promoHistoryEl.classList.add("hidden");
   promoResultEl.classList.remove("hidden");
 }
@@ -1380,7 +1397,8 @@ function resetPromoTab() {
   promoInputEl.value = "";
   clearPromoStatus();
   hidePromoRemoveConfirm();
-  promoEntryEl.classList.remove("hidden");
+  promoEntryEl.classList.add("hidden");
+  promoAddBtnEl.classList.remove("hidden");
   promoResultEl.classList.add("hidden");
   updatePromoCheckBtnState();
   renderPromoHistory();
@@ -1434,6 +1452,45 @@ function openGiftFromUrl() {
 }
 
 // ============================================================
+// BANNER — one at a time, only when relevant, closable for good
+// ============================================================
+
+var BANNER_DISMISSED_KEY = "amali_banner_dismissed";
+var openInstallHint = null; // set when this phone can add the app to the home screen
+var currentBanner = null;
+
+function bannerDismissed(type) {
+  try { return (JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {})[type] === true; } catch (e) { return false; }
+}
+
+function dismissBanner(type) {
+  try {
+    var d = JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {};
+    d[type] = true;
+    localStorage.setItem(BANNER_DISMISSED_KEY, JSON.stringify(d));
+  } catch (e) {}
+}
+
+function updateBanner() {
+  currentBanner = null;
+  // Shown from the second punch on, so a first-time customer sees only the card.
+  if (openInstallHint && state.punches >= 2 && !bannerDismissed("install")) currentBanner = "install";
+  if (!currentBanner) { bannerEl.classList.add("hidden"); return; }
+  bannerTitleEl.textContent = "הוסיפו את עמלי למסך הבית";
+  bannerBtnEl.textContent = "איך מוסיפים";
+  bannerEl.classList.remove("hidden");
+}
+
+bannerBtnEl.addEventListener("click", function () {
+  if (currentBanner === "install" && openInstallHint) openInstallHint();
+});
+
+bannerCloseEl.addEventListener("click", function () {
+  if (currentBanner) dismissBanner(currentBanner);
+  updateBanner();
+});
+
+// ============================================================
 // INITIALIZATION
 // ============================================================
 
@@ -1457,6 +1514,7 @@ function openGiftFromUrl() {
   // Gift cards: carry over codes from the old system, open ?gift= links
   migrateLegacyGiftCodes();
   updatePromoCheckBtnState();
+  renderPromoHistory();
   openGiftFromUrl();
 
   // Load persisted state
@@ -1476,8 +1534,8 @@ function openGiftFromUrl() {
   // Card ID / cloud sync
   cardId = getStoredCardId();
   if (!cardId) {
-    // Show backup modal (migration if they already have punches)
-    showCardBackupModal(state.punches);
+    // No popup anymore: back up automatically (ID shown in the "עוד" menu)
+    ensureCardId();
   } else {
     showUtilityIcon(myCardBtnEl);
     updateCardIdDisplay();
@@ -1494,7 +1552,7 @@ function openGiftFromUrl() {
     });
   }
 
-  // Install hint button
+  // Install hint ("הוספה למסך הבית"): in the "עוד" menu and as a banner
   (function() {
     var isStandalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
     if (isStandalone) return;
@@ -1503,7 +1561,6 @@ function openGiftFromUrl() {
     var isAndroid = /Android/.test(ua);
     if (!isIOS && !isAndroid) return;
 
-    var btn = document.getElementById("a2hs-btn");
     var popup = document.getElementById("a2hs-popup");
     var backdrop = document.getElementById("a2hs-backdrop");
     var textEl = document.getElementById("a2hs-popup-text");
@@ -1513,21 +1570,26 @@ function openGiftFromUrl() {
       ? "לחצו על כפתור השיתוף ⬆ בתחתית הדפדפן ואז \"הוסף למסך הבית\" ו\"התקן\""
       : "לחצו על שלוש הנקודות ⋮ למעלה ואז \"הוסף למסך הבית\" ו\"התקן\"";
     textEl.innerHTML = "מומלץ להוריד את האפליקציה למכשיר :)<br><br>" + step;
-    showUtilityIcon(btn);
 
-    btn.addEventListener("click", function() {
+    openInstallHint = function() {
       popup.classList.remove("hidden");
       backdrop.classList.remove("hidden");
+    };
+    moreInstallBtnEl.classList.remove("hidden");
+    moreInstallBtnEl.addEventListener("click", function() {
+      hideCardBackupModal();
+      openInstallHint();
     });
 
     function closePopup() {
       popup.classList.add("hidden");
       backdrop.classList.add("hidden");
     }
-
     closeBtn.addEventListener("click", closePopup);
     backdrop.addEventListener("click", closePopup);
   })();
+
+  updateBanner();
 
   // Check for pending celebration
   if (state.celebrationPending) {

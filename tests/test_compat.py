@@ -6,13 +6,14 @@ cloud merge writes and live gift balances.
 
 Usage:  python3 tests/test_compat.py docs            # production (docs/)
         python3 tests/test_compat.py docs beta/      # beta (docs/beta/)
+        python3 tests/test_compat.py docs "" --full  # production, including features shipped from beta
 """
 import functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 
 ROOT = sys.argv[1]
 PREFIX = sys.argv[2] if len(sys.argv) > 2 else ""
-IS_BETA = PREFIX.startswith("beta")
+IS_BETA = PREFIX.startswith("beta") or "--full" in sys.argv
 MOCK = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock-firebase.js"), encoding="utf-8").read()
 PORT = 8802
 BASE = f"http://localhost:{PORT}/"

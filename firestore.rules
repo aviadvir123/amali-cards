@@ -1,0 +1,119 @@
+rules_version = '2';
+
+// ============================================================
+// חוקי אבטחה — עמלי, כרטיסי ניקוב וכרטיסי מתנה
+// מדביקים את כל הקובץ ב-Firebase Console → Firestore → Rules → Publish
+// ============================================================
+//
+// מי יכול מה:
+//   לקוח (לא מחובר) — רואה יתרה של קוד מתנה רק אם הוא יודע את הקוד.
+//                       אין אפשרות לראות רשימה של קודים או לשנות יתרה.
+//   עובד/ת (מחובר/ת עם Google ורשום/ה ב-staff) — יוצר/ת קופונים, מממש/ת, רואה רשימה.
+//   בעלים (המיילים ב-ownerEmails) — כל מה שעובד יכול, ובנוסף: ניהול צוות,
+//                                      ביטול/מחיקת קופונים, ייבוא קודים ישנים.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── מי זה מי ───────────────────────────────────────────────
+    // כדי להוסיף בעלים: מוסיפים מייל (באותיות קטנות) לרשימה ומפרסמים שוב.
+    function ownerEmails() {
+      return ['elisharainer@gmail.com'];
+    }
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function isOwner() {
+      return signedIn() && myEmail() in ownerEmails();
+    }
+
+    function isStaff() {
+      return isOwner()
+        || (signedIn() && exists(/databases/$(database)/documents/staff/$(myEmail())));
+    }
+
+    function validCodeId(code) {
+      return code.matches('^[A-Z0-9-]{4,24}$');
+    }
+
+    // ── כרטיסי ניקוב (גיבוי ענן) ───────────────────────────────
+    // הלקוח קורא וכותב את הכרטיס שלו לפי מזהה. רק צוות יכול לראות את כל הכרטיסים.
+    match /cards/{cardId} {
+      allow get, create, update: if true;
+      allow list: if isStaff();
+      allow delete: if false;
+    }
+
+    // ── כרטיסי מתנה ───────────────────────────────────────────
+    // מזהה המסמך הוא הקוד עצמו (באותיות גדולות).
+    match /giftCodes/{code} {
+      allow get: if validCodeId(code);
+      allow list: if isStaff();
+      allow create: if isStaff() && validNewCode(code);
+      allow update: if (isStaff() && isRedemption()) || (isOwner() && isOwnerEdit());
+      allow delete: if isOwner();
+    }
+
+    // קופון חדש: יתרה = סכום, בלי היסטוריה. (בעלים רשאים לייבא קוד ישן עם יתרה והיסטוריה.)
+    function validNewCode(code) {
+      let d = request.resource.data;
+      return validCodeId(code)
+        && d.keys().hasOnly(['amount', 'remaining', 'note', 'createdAt', 'createdBy', 'history', 'active'])
+        && d.keys().hasAll(['amount', 'remaining', 'createdAt', 'createdBy', 'history', 'active'])
+        && d.amount is int && d.amount > 0 && d.amount <= 5000
+        && d.remaining is int && d.remaining >= 0 && d.remaining <= d.amount
+        && (d.remaining == d.amount || isOwner())
+        && d.history is list && (d.history.size() == 0 || isOwner())
+        && d.active == true
+        && d.createdAt == request.time
+        && d.createdBy is string && d.createdBy.size() <= 60
+        && (!('note' in d) || (d.note is string && d.note.size() <= 120));
+    }
+
+    // מימוש: היתרה רק יורדת, ובדיוק שורה אחת נוספת להיסטוריה עם הסכום שירד.
+    function isRedemption() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let n = before.history.size();
+      return before.active == true
+        && after.diff(before).affectedKeys().hasOnly(['remaining', 'history'])
+        && after.remaining is int
+        && after.remaining >= 0
+        && after.remaining < before.remaining
+        && after.history is list
+        && after.history.size() == n + 1
+        && after.history[0:n] == before.history
+        && after.history[n].keys().hasOnly(['used', 'at', 'by'])
+        && after.history[n].used == before.remaining - after.remaining
+        && after.history[n].at is int
+        && after.history[n].by is string && after.history[n].by.size() <= 60;
+    }
+
+    // בעלים: ביטול/החזרה של קופון, עדכון הערה או תיקון יתרה. הסכום המקורי לא משתנה.
+    function isOwnerEdit() {
+      let after = request.resource.data;
+      return after.diff(resource.data).affectedKeys().hasOnly(['remaining', 'note', 'active', 'history'])
+        && after.remaining is int && after.remaining >= 0 && after.remaining <= after.amount
+        && after.active is bool
+        && after.history is list;
+    }
+
+    // ── צוות ──────────────────────────────────────────────────
+    // מזהה המסמך הוא המייל של העובד/ת באותיות קטנות.
+    match /staff/{email} {
+      allow read: if isStaff();
+      allow create, update: if isOwner()
+        && email == email.lower()
+        && request.resource.data.keys().hasOnly(['name', 'addedBy', 'addedAt']);
+      allow delete: if isOwner();
+    }
+  }
+}

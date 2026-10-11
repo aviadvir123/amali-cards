@@ -10,6 +10,13 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 5. At 10 punches — celebration animation, card resets to zero
 6. No history, no accounts, no backend (MVP)
 
+## Gift Cards (כרטיסי מתנה)
+- Codes and balances live in Firestore, collection `giftCodes` (doc id = the code). Nothing is hardcoded in `app.js`.
+- Staff page `docs/staff.html`: Google sign-in, create codes (random by default), redeem, list, cancel. Owners also manage the team and ran the one-time legacy import.
+- Customers only look up a code they know and see its balance; the barista redeems.
+- Security is enforced by `firestore.rules` (paste into Firebase Console → Firestore → Rules). Owners = `ownerEmails()` there and `OWNER_EMAILS` in `staff.html` — keep both in sync.
+- Production is `docs/`; `src/` is a stale copy.
+
 ## Constraints
 - Zero cost — development, hosting, production all free
 - No app store — works without install

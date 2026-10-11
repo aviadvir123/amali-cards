@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>עמלי - ניהול כרטיסי מתנה</title>
+  <title>עמלי - קוד ניקוב</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
@@ -167,7 +167,7 @@
 </head>
 <body>
 
-  <div class="header">ניהול כרטיסי מתנה — עמלי</div>
+  <div class="header">קוד ניקוב — עמלי</div>
 
   <div class="container">
 
@@ -196,8 +196,15 @@
       </div>
     </div>
 
-    <!-- Current codes list -->
+    <!-- Gift cards moved to staff.html -->
     <div class="card">
+      <p class="card-title">כרטיסי מתנה</p>
+      <p style="font-weight:400;margin-bottom:12px">כרטיסי המתנה עברו לדף הצוות — יצירה, מימוש ויתרות, בלי טוקן ובלי לשנות קוד.</p>
+      <a class="btn" href="staff.html" style="display:flex;align-items:center;justify-content:center;text-decoration:none">לדף הצוות</a>
+    </div>
+
+    <!-- Legacy: hardcoded promo codes (no longer used) -->
+    <div class="card hidden">
       <p class="card-title">קודים פעילים</p>
       <div id="codes-list" class="codes-list">
         <div class="placeholder">הזן טוקן כדי לטעון קודים</div>
@@ -205,7 +212,7 @@
     </div>
 
     <!-- Add new code -->
-    <div class="card">
+    <div class="card hidden">
       <p class="card-title">הוספת קוד חדש</p>
       <div class="input-row">
         <input type="text"   id="new-code"   class="input-code"   placeholder="שם הקוד" dir="ltr" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">

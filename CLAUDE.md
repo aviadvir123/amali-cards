@@ -22,6 +22,7 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 - Run tests against beta and production: `python3 tests/test_compat.py docs beta/`, `python3 tests/test_compat.py docs`, `python3 tests/test_gift_staff.py docs beta/`.
 - After the owner approves the beta: `python3 tools/promote_beta.py` copies it to `docs/` (fixes asset paths, removes the badge). Review `git diff docs/`.
 - Never rename or delete the phone storage keys (`amali_punch_card`, `amali_card_id`, `amali_used_promos`, `amali_active_promo`). Cloud card docs (`cards/{id}`) are written with `merge: true`; only add fields.
+- Save with Google: Google Identity Services button; the app hashes `"amali-cards:" + sub` (SHA-256) on the phone and stores only `accounts/{hash} -> {cardId}`. Never store email, name or the raw Google ID. Client ID in `GOOGLE_CLIENT_ID` (app.js); its Authorized JavaScript origin is https://aviadvir123.github.io.
 - Punch code: set by staff on staff.html (Firestore `settings/punch`), cached on the phone (`amali_punch_code`); `PUNCH_CODE` in app.js is only the fallback.
 
 ## Constraints

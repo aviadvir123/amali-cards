@@ -31,8 +31,10 @@ for out in (js, css):
 (root / css).write_text((root / "beta" / "style.css").read_text(encoding="utf-8"), encoding="utf-8")
 
 index = clean((root / "beta" / "index.html").read_text(encoding="utf-8"))
-assert index.count('src="app.js"') == 1 and index.count('href="style.css"') == 1
-index = index.replace('src="app.js"', f'src="{js}"').replace('href="style.css"', f'href="{css}"')
+# beta references app.js?v=N / style.css?v=N (cache-busting); production uses versioned names
+index, n_js = re.subn(r'src="app\.js(\?v=[^"]*)?"', f'src="{js}"', index)
+index, n_css = re.subn(r'href="style\.css(\?v=[^"]*)?"', f'href="{css}"', index)
+assert n_js == 1 and n_css == 1, "beta index.html must load app.js and style.css once"
 (root / "index.html").write_text(index, encoding="utf-8")
 
 (root / "staff.html").write_text(clean((root / "beta" / "staff.html").read_text(encoding="utf-8")), encoding="utf-8")

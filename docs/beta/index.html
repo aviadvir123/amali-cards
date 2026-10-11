@@ -13,11 +13,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="https://accounts.google.com/gsi/client" async></script>
-  <script src="app.js?v=7" defer></script>
+  <script src="app.js?v=8" defer></script>
   <title>עמלי - כרטיס ניקוב</title>
 </head>
 <body>
@@ -102,12 +102,14 @@
     <div id="promo-section" class="promo-section">
 
       <!-- My saved gift cards -->
-      <div id="promo-history" class="promo-history promo-my-cards hidden">
+      <div class="promo-head">
         <p class="section-label">כרטיסי מתנה</p>
-        <div id="promo-history-list"></div>
+        <button type="button" id="promo-add-btn" class="promo-add-btn">+ יש לי קוד מתנה</button>
       </div>
 
-      <button type="button" id="promo-add-btn" class="promo-add-btn">+ יש לי קוד מתנה</button>
+      <div id="promo-history" class="promo-history promo-my-cards hidden">
+        <div id="promo-history-list"></div>
+      </div>
 
       <!-- Entry state -->
       <div id="promo-entry" class="hidden">
@@ -181,14 +183,6 @@
               <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
             </svg>
           </a>
-          <a href="https://forms.gle/7vKbKuAPGsU5w6Jz8" target="_blank" rel="noopener" class="social-link social-link--jobs-icon" aria-label="דרושים לצוות">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="2.5" y="7" width="19" height="13" rx="2.5"/>
-              <path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7"/>
-              <path d="M2.5 12.5h19"/>
-              <path d="M10.5 12.5v1.5h3v-1.5"/>
-            </svg>
-          </a>
           <a href="https://www.amaliroast.com" target="_blank" rel="noopener" class="social-link social-link--website" aria-label="משלוחים — האתר של עמלי">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M1.5 5.5h12v10h-12z"/>
@@ -198,6 +192,7 @@
             </svg>
           </a>
         </div>
+        <a href="https://forms.gle/7vKbKuAPGsU5w6Jz8" target="_blank" rel="noopener" class="footer-jobs">הצטרפו אלינו</a>
       </div>
     </footer>
 

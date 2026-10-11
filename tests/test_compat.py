@@ -17,7 +17,9 @@ IS_BETA = PREFIX.startswith("beta") or "--full" in sys.argv
 # The one-screen layout (no tabs, no first-open popup, "עוד" menu) — on beta until promoted.
 def one_screen(page):
     return page.locator("#more-btn").count() > 0
-MOCK = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock-firebase.js"), encoding="utf-8").read()
+HERE = os.path.dirname(os.path.abspath(__file__))
+MOCK = open(os.path.join(HERE, "mock-firebase.js"), encoding="utf-8").read()
+MOCK_GSI = open(os.path.join(HERE, "mock-gsi.js"), encoding="utf-8").read()
 PORT = 8802
 BASE = f"http://localhost:{PORT}/"
 
@@ -89,6 +91,7 @@ with sync_playwright() as p:
     ctx = b.new_context(viewport={"width": 390, "height": 844})
     ctx.route(re.compile(r".*gstatic\.com/firebasejs/.*"), lambda r: r.fulfill(body=MOCK, content_type="application/javascript"))
     ctx.route(re.compile(r".*fonts\.(googleapis|gstatic)\.com/.*"), lambda r: r.fulfill(body="", content_type="text/css"))
+    ctx.route(re.compile(r".*accounts\.google\.com/gsi/client.*"), lambda r: r.fulfill(body=MOCK_GSI, content_type="application/javascript"))
     page = ctx.new_page()
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("dialog", lambda d: d.accept())
@@ -187,6 +190,61 @@ with sync_playwright() as p:
         page.wait_for_function("document.querySelector('#promo-amount').textContent.includes('170')", timeout=3000)
         toast = page.inner_text("#toast")
         ok("30" in toast and "170" in toast, f"balance updates by itself with a message ({toast.strip()})")
+
+        # ---------- F. save with Google (beta) ----------
+        if page.locator("#more-google-btn").count():
+            open_app(page, {"amali_punch_card": card(5), "amali_card_id": "GOOG11"})
+            ok(page.is_visible("#app-banner") and "Google" in page.inner_text("#app-banner"), "banner offers saving with Google (5 punches)")
+            page.click("#more-btn")
+            page.click("#more-google-btn")
+            page.click("#mock-google-btn")
+            page.wait_for_function("localStorage.getItem('amali_google_linked') === '1'", timeout=4000)
+            db = mockdb(page)
+            accts = db.get("accounts", {})
+            hashes = list(accts.keys())
+            ok(len(hashes) == 1 and re.fullmatch(r"[a-f0-9]{64}", hashes[0]) and accts[hashes[0]]["cardId"] == "GOOG11",
+               "saved: account hash -> GOOG11")
+            ok(set(accts[hashes[0]].keys()) <= {"cardId", "linkedAt"}, "account record holds only card number + date")
+            blob = json.dumps(db, ensure_ascii=False) + json.dumps(ls(page), ensure_ascii=False)
+            ok("someone@gmail.com" not in blob and "Someone Private" not in blob and "111111111111111111111" not in blob,
+               "no email, name or Google number stored anywhere (cloud or phone)")
+            ok(not page.is_visible("#app-banner"), "banner gone after saving")
+            page.click("#more-btn")
+            ok("✓" in page.inner_text("#more-google-btn"), "menu shows saved ✓")
+            page.click("#card-settings-close-btn")
+
+            # new phone / Safari wiped: empty card, restore with Google
+            saved_cloud = mockdb(page)
+            open_app(page, {}, saved_cloud)
+            page.click("#more-btn")
+            page.click("#card-settings-switch-replace")
+            page.click("#restore-google-link")
+            page.click("#mock-google-btn")
+            page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
+            ok(ls(page).get("amali_card_id") == "GOOG11", "new phone: Google brings back the same card (5 punches)")
+
+            # phone that already has punches on another card: asks first (test accepts)
+            open_app(page, {"amali_punch_card": card(2), "amali_card_id": "OTHR22"}, saved_cloud)
+            page.click("#more-btn")
+            page.click("#more-google-btn")
+            page.click("#mock-google-btn")
+            page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
+            c2 = mockdb(page)["cards"].get("OTHR22") if "cards" in mockdb(page) else None
+            ok(ls(page).get("amali_card_id") == "GOOG11", "phone with another card asks, then switches to the saved one")
+
+            # inside Instagram's browser Google can't sign in: clear message, no button
+            ig = b.new_context(viewport={"width": 390, "height": 844},
+                               user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Instagram 300.0")
+            ig.route(re.compile(r".*gstatic\.com/firebasejs/.*"), lambda r: r.fulfill(body=MOCK, content_type="application/javascript"))
+            ig.route(re.compile(r".*accounts\.google\.com/gsi/client.*"), lambda r: r.fulfill(body=MOCK_GSI, content_type="application/javascript"))
+            ipg = ig.new_page()
+            ipg.goto(BASE + PREFIX + "index.html")
+            seed(ipg, {"amali_punch_card": card(3), "amali_card_id": "INST33"})
+            ipg.reload(); ipg.wait_for_timeout(600)
+            ipg.click("#more-btn"); ipg.click("#more-google-btn"); ipg.wait_for_timeout(300)
+            ok("Safari" in ipg.inner_text("#google-status") and ipg.locator("#mock-google-btn").count() == 0,
+               "inside Instagram: asks to open in Safari/Chrome")
+            ig.close()
 
         # ---------- E. staff page sets the code ----------
         page.goto(BASE + PREFIX + "staff.html")

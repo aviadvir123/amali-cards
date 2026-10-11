@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async></script>
   <script src="app.js" defer></script>
   <title>עמלי - כרטיס ניקוב</title>
 </head>
@@ -227,7 +228,17 @@
         <input type="text" id="card-backup-restore-input" class="code-input" dir="ltr" placeholder="AB34X7" maxlength="6" autocomplete="off" inputmode="text">
         <button type="button" id="card-backup-restore-btn" class="punch-btn" disabled>שחזור</button>
         <div id="card-backup-restore-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        <p class="card-backup-link hidden" id="restore-google-link">שחזור עם Google</p>
         <p class="card-backup-link" id="card-backup-switch-new">כרטיס חדש</p>
+      </div>
+
+      <!-- Save / restore with Google (only an encrypted ID is stored) -->
+      <div id="google-view" class="hidden">
+        <p class="card-backup-title">שמירה עם Google</p>
+        <p class="card-backup-desc">לא נשמרים שם או מייל</p>
+        <div id="google-btn-slot" class="google-btn-slot"></div>
+        <div id="google-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        <p class="card-backup-link" id="google-cancel">ביטול</p>
       </div>
 
       <!-- "עוד" menu (was "הכרטיס שלי") -->

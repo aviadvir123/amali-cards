@@ -1460,3 +1460,11 @@ body.celebration-active {
 .more-code { display: flex; align-items: center; gap: 8px; }
 .more-code-value { letter-spacing: 0.12em; }
 .more-code .card-backup-copy-btn { padding: 6px 10px; }
+
+.google-btn-slot {
+  min-height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 8px 0 4px;
+}

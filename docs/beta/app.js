@@ -53,6 +53,13 @@ var ACTIVE_PROMO_KEY = "amali_active_promo";
 var GIFT_CODE_RE = /^[A-Z0-9-]{4,24}$/;
 
 // ============================================================
+// SAVE WITH GOOGLE — only a one-way hash of the Google account number is stored
+// (Firestore accounts/{hash} -> {cardId}). No name, no email, anywhere.
+// ============================================================
+var GOOGLE_CLIENT_ID = "984463740776-vj09qje9q7rgeg7ammcgjfh9a460g6gm.apps.googleusercontent.com";
+var GOOGLE_LINKED_KEY = "amali_google_linked";
+
+// ============================================================
 // SHAPE DEFINITIONS — 16 geometric shapes inspired by the brand
 // Each shape is defined relative to center (0,0) within ~34x34 box.
 // Parts can be 'circle' or 'path' SVG elements.
@@ -197,6 +204,11 @@ var bannerEl = document.getElementById("app-banner");
 var bannerTitleEl = document.getElementById("app-banner-title");
 var bannerBtnEl = document.getElementById("app-banner-btn");
 var bannerCloseEl = document.getElementById("app-banner-close");
+var googleViewEl = document.getElementById("google-view");
+var googleBtnSlotEl = document.getElementById("google-btn-slot");
+var googleStatusEl = document.getElementById("google-status");
+var googleCancelEl = document.getElementById("google-cancel");
+var restoreGoogleLinkEl = document.getElementById("restore-google-link");
 
 // Promo (gift card) elements
 var promoInputEl = document.getElementById("promo-input");
@@ -492,8 +504,14 @@ function handleRestoreCard() {
       cardBackupRestoreStatusEl.className = "status-message error";
       return;
     }
+    applyCloudCard(enteredId, cloudData);
+  });
+}
+
+// Switch this phone to a card stored in the cloud (restore by code or by Google).
+function applyCloudCard(id, cloudData) {
     var restored = validateCloudState(cloudData);
-    cardId = enteredId;
+    cardId = id;
     storeCardId(cardId);
     // Restore gift card data if present
     try {
@@ -521,7 +539,6 @@ function handleRestoreCard() {
       lockUI();
       showCelebration();
     }
-  });
 }
 
 cardBackupChoiceNewBtnEl.addEventListener("click", function() {
@@ -579,6 +596,7 @@ function showAllViews(show) {
   cardBackupNewViewEl.classList.add("hidden");
   cardBackupRestoreViewEl.classList.add("hidden");
   cardSettingsViewEl.classList.add("hidden");
+  googleViewEl.classList.add("hidden");
   show.classList.remove("hidden");
 }
 
@@ -1451,6 +1469,160 @@ function openGiftFromUrl() {
   handlePromoCheck();
 }
 
+// ---- Save with Google ----
+function googleEnabled() { return !!GOOGLE_CLIENT_ID; }
+
+function isGoogleLinked() {
+  try { return localStorage.getItem(GOOGLE_LINKED_KEY) === "1"; } catch (e) { return false; }
+}
+
+function setGoogleLinked() {
+  try { localStorage.setItem(GOOGLE_LINKED_KEY, "1"); } catch (e) {}
+  updateGoogleMenuItem();
+  updateBanner();
+}
+
+// Google blocks sign-in inside these apps' built-in browsers.
+function inAppBrowser() {
+  return /Instagram|FBAN|FBAV|FB_IAB|WhatsApp|Line\/|TikTok|Snapchat/i.test(navigator.userAgent || "");
+}
+
+function updateGoogleMenuItem() {
+  if (!googleEnabled()) return;
+  moreGoogleBtnEl.classList.remove("hidden");
+  restoreGoogleLinkEl.classList.remove("hidden");
+  moreGoogleBtnEl.textContent = isGoogleLinked() ? "✓ שמור עם Google" : "שמירה עם Google";
+}
+
+function showGoogleStatus(text, type) {
+  googleStatusEl.textContent = text;
+  googleStatusEl.className = "status-message" + (type ? " " + type : "");
+}
+
+function decodeJwtPayload(token) {
+  var part = String(token || "").split(".")[1] || "";
+  part = part.replace(/-/g, "+").replace(/_/g, "/");
+  while (part.length % 4) part += "=";
+  return JSON.parse(decodeURIComponent(Array.prototype.map.call(atob(part), function (c) {
+    return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join("")));
+}
+
+function sha256Hex(text) {
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+  });
+}
+
+function openGoogleView() {
+  if (!googleEnabled()) return;
+  ensureCardId();
+  googleStatusEl.className = "status-message hidden";
+  googleBtnSlotEl.innerHTML = "";
+  showAllViews(googleViewEl);
+  cardBackupOverlayEl.classList.remove("hidden");
+  appEl.setAttribute("aria-hidden", "true");
+
+  if (inAppBrowser()) {
+    showGoogleStatus("כדי לשמור עם Google, פתחו את האפליקציה ב-Safari או ב-Chrome", "error");
+    return;
+  }
+  if (!db) { showGoogleStatus("אין חיבור כרגע, נסו שוב", "error"); return; }
+
+  var tries = 0;
+  (function waitForGoogle() {
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        use_fedcm_for_prompt: true
+      });
+      google.accounts.id.renderButton(googleBtnSlotEl, {
+        type: "standard", theme: "outline", size: "large", text: "continue_with", shape: "pill", locale: "he", width: 260
+      });
+      return;
+    }
+    if (++tries > 40) { showGoogleStatus("לא הצלחנו לטעון את Google, נסו שוב", "error"); return; }
+    setTimeout(waitForGoogle, 150);
+  })();
+}
+
+function handleGoogleCredential(response) {
+  var sub;
+  try {
+    var claims = decodeJwtPayload(response && response.credential);
+    if (claims.aud !== GOOGLE_CLIENT_ID || !/accounts\.google\.com$/.test(claims.iss || "")) throw new Error("bad token");
+    sub = String(claims.sub || "");
+    if (!sub) throw new Error("no sub");
+  } catch (e) {
+    showGoogleStatus("ההתחברות נכשלה, נסו שוב", "error");
+    return;
+  }
+  showGoogleStatus("שומר...", "");
+  // Only this one-way hash leaves the phone; the token, name and email are dropped here.
+  sha256Hex("amali-cards:" + sub).then(handleGoogleAccount).catch(function () {
+    showGoogleStatus("משהו השתבש, נסו שוב", "error");
+  });
+}
+
+function handleGoogleAccount(hash) {
+  var ref = db.collection("accounts").doc(hash);
+  ref.get().then(function (doc) {
+    var linkedCard = doc.exists ? doc.data().cardId : null;
+
+    // First time with this Google account: save this phone's card under it.
+    if (!linkedCard) {
+      return ref.set({ cardId: cardId, linkedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function () {
+        saveToCloud(state);
+        setGoogleLinked();
+        hideCardBackupModal();
+        showToast("הכרטיסייה נשמרה עם Google", 2500);
+      });
+    }
+
+    // Already saved from this phone.
+    if (linkedCard === cardId) {
+      setGoogleLinked();
+      hideCardBackupModal();
+      showToast("הכרטיסייה כבר שמורה עם Google", 2500);
+      return;
+    }
+
+    // This Google account already holds another card (new phone / browser wiped).
+    return new Promise(function (resolve) { loadFromCloud(linkedCard, resolve); }).then(function (cloudData) {
+      if (!cloudData) {
+        // Saved card is gone: point the account at this phone's card instead.
+        return ref.set({ cardId: cardId, linkedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(function () {
+          saveToCloud(state);
+          setGoogleLinked();
+          hideCardBackupModal();
+          showToast("הכרטיסייה נשמרה עם Google", 2500);
+        });
+      }
+      var saved = validateCloudState(cloudData);
+      var hereHasPunches = state.punches > 0 || state.celebrationPending;
+      if (hereHasPunches) {
+        var ok = confirm("בחשבון הזה שמורה כרטיסייה עם " + saved.punches + " ניקובים.\n" +
+          "בטלפון הזה יש " + state.punches + ".\nלעבור לכרטיסייה השמורה?");
+        if (!ok) { hideCardBackupModal(); return; }
+      }
+      applyCloudCard(linkedCard, cloudData);
+      setGoogleLinked();
+    });
+  }).catch(function () {
+    showGoogleStatus("אין חיבור כרגע, נסו שוב", "error");
+  });
+}
+
+moreGoogleBtnEl.addEventListener("click", function () {
+  if (isGoogleLinked()) return;
+  openGoogleView();
+});
+restoreGoogleLinkEl.addEventListener("click", openGoogleView);
+googleCancelEl.addEventListener("click", hideCardBackupModal);
+
 // ============================================================
 // BANNER — one at a time, only when relevant, closable for good
 // ============================================================
@@ -1474,15 +1646,23 @@ function dismissBanner(type) {
 function updateBanner() {
   currentBanner = null;
   // Shown from the second punch on, so a first-time customer sees only the card.
-  if (openInstallHint && state.punches >= 2 && !bannerDismissed("install")) currentBanner = "install";
+  var ready = state.punches >= 2;
+  if (ready && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("google")) currentBanner = "google";
+  else if (ready && openInstallHint && !bannerDismissed("install")) currentBanner = "install";
   if (!currentBanner) { bannerEl.classList.add("hidden"); return; }
-  bannerTitleEl.textContent = "הוסיפו את עמלי למסך הבית";
-  bannerBtnEl.textContent = "איך מוסיפים";
+  if (currentBanner === "google") {
+    bannerTitleEl.textContent = "שלא תאבדו ניקובים";
+    bannerBtnEl.textContent = "שמירה עם Google";
+  } else {
+    bannerTitleEl.textContent = "הוסיפו את עמלי למסך הבית";
+    bannerBtnEl.textContent = "איך מוסיפים";
+  }
   bannerEl.classList.remove("hidden");
 }
 
 bannerBtnEl.addEventListener("click", function () {
   if (currentBanner === "install" && openInstallHint) openInstallHint();
+  if (currentBanner === "google") openGoogleView();
 });
 
 bannerCloseEl.addEventListener("click", function () {
@@ -1515,6 +1695,7 @@ bannerCloseEl.addEventListener("click", function () {
   migrateLegacyGiftCodes();
   updatePromoCheckBtnState();
   renderPromoHistory();
+  updateGoogleMenuItem();
   openGiftFromUrl();
 
   // Load persisted state

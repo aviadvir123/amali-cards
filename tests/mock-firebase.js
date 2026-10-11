@@ -68,6 +68,15 @@
         return;
       }
     }
+    if (col === "accounts") {
+      if (!/^[a-f0-9]{64}$/.test(id)) throw denied();
+      if (op === "get") return;
+      if (op === "list" || op === "delete") throw denied();
+      var keys = Object.keys(after);
+      if (keys.some(function (k) { return k !== "cardId" && k !== "linkedAt"; })) throw denied();
+      if (!/^[A-Z0-9]{6}$/.test(after.cardId || "")) throw denied();
+      return;
+    }
     if (col === "settings") {
       if (op === "get") { if (id !== "punch") throw denied(); return; }
       if (op === "list") throw denied();

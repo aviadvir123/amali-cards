@@ -106,6 +106,20 @@ service cloud.firestore {
         && after.history is list;
     }
 
+    // ── שמירה עם Google ───────────────────────────────────────
+    // מזהה המסמך = גיבוב חד-כיווני (SHA-256) של מספר החשבון ב-Google. בלי שם ובלי מייל.
+    // מצביע על מספר הכרטיסייה הקיים; אף פעם לא מעביר או מוחק כרטיסייה.
+    match /accounts/{hash} {
+      allow get: if hash.matches('^[a-f0-9]{64}$');
+      allow list: if false;
+      allow create, update: if hash.matches('^[a-f0-9]{64}$')
+        && request.resource.data.keys().hasOnly(['cardId', 'linkedAt'])
+        && request.resource.data.cardId is string
+        && request.resource.data.cardId.matches('^[A-Z0-9]{6}$')
+        && request.resource.data.linkedAt == request.time;
+      allow delete: if isOwner();
+    }
+
     // ── הגדרות: קוד הניקוב ────────────────────────────────────
     // האפליקציה של הלקוח קוראת את הקוד; רק צוות משנה אותו.
     match /settings/{doc} {

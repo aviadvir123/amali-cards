@@ -14,6 +14,9 @@ from playwright.sync_api import sync_playwright
 ROOT = sys.argv[1]
 PREFIX = sys.argv[2] if len(sys.argv) > 2 else ""
 IS_BETA = PREFIX.startswith("beta") or "--full" in sys.argv
+# The one-screen layout (no tabs, no first-open popup, "עוד" menu) — on beta until promoted.
+def one_screen(page):
+    return page.locator("#more-btn").count() > 0
 MOCK = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock-firebase.js"), encoding="utf-8").read()
 PORT = 8802
 BASE = f"http://localhost:{PORT}/"
@@ -110,8 +113,18 @@ with sync_playwright() as p:
             ok(page.is_visible("#celebration.visible") or "visible" in (page.get_attribute("#celebration", "class") or ""),
                f"{tag} free-coffee screen still shows")
         if name == "mid-card, never saved a backup code":
-            ok(page.is_visible("#card-backup-overlay") and "4" in page.inner_text("#card-backup-new-desc"),
-               f"{tag} gets a backup code offer that mentions their 4 punches")
+            if one_screen(page):
+                page.wait_for_timeout(400)
+                cid = ls(page).get("amali_card_id")
+                cloud_card = (mockdb(page).get("cards") or {}).get(cid or "", {})
+                ok(not page.is_visible("#card-backup-overlay") and cid and cloud_card.get("punches") == 4,
+                   f"{tag} no popup; backed up automatically with their 4 punches ({cid})")
+            else:
+                ok(page.is_visible("#card-backup-overlay") and "4" in page.inner_text("#card-backup-new-desc"),
+                   f"{tag} gets a backup code offer that mentions their 4 punches")
+        if name == "new customer (nothing stored)" and one_screen(page):
+            ok(not page.is_visible("#card-backup-overlay") and page.is_visible("#punch-btn"),
+               f"{tag} sees the card right away, no popup")
         if name == "corrupted card data":
             ok(progress(page) == "0" and after.get("amali_card_id") == "BADD44", f"{tag} app opens, backup code kept")
 
@@ -119,11 +132,21 @@ with sync_playwright() as p:
     cloud = {"cards": {"REST55": {"punches": 6, "celebrationPending": False, "shapeIndices": SHAPES,
                                    "promos": {"NOAM110": {"remaining": 60, "history": []}}, "activePromo": None}}}
     open_app(page, {}, cloud)
-    page.click("#card-backup-choice-restore")
+    if one_screen(page):
+        page.click("#more-btn")
+        page.click("#card-settings-switch-replace")
+    else:
+        page.click("#card-backup-choice-restore")
     page.fill("#card-backup-restore-input", "REST55")
     page.click("#card-backup-restore-btn")
     page.wait_for_timeout(800)
     ok(progress(page) == "6" and ls(page).get("amali_card_id") == "REST55", "restore by old backup code still works (6 punches back)")
+
+    if one_screen(page):
+        page.click("#more-btn")
+        ok(page.inner_text("#card-settings-id-display").strip() == "REST55", "\"עוד\" menu shows the backup code REST55")
+        page.click("#card-settings-close-btn")
+        ok(not page.is_visible("#tab-punch") if page.locator("#tab-punch").count() else True, "no tabs")
 
     # ---------- C. punch code ----------
     open_app(page, {"amali_punch_card": card(1), "amali_card_id": "PUNC66"})

@@ -165,11 +165,13 @@ with sync_playwright() as p:
     ok("DH180" in txt and "50 ₪" in txt and new_code in txt, "saved list: migrated DH180 (50) + new code")
     (OUT and page.screenshot(path=OUT + "/customer_list.png", full_page=True))
 
+    if page.is_visible("#promo-add-btn"): page.click("#promo-add-btn")
     page.fill("#promo-input", "NOPE99")
     page.click("#promo-check-btn")
     page.wait_for_function("document.querySelector('#promo-status').textContent.includes('לא תקף')")
     ok(True, "unknown code rejected")
 
+    if page.is_visible("#promo-add-btn"): page.click("#promo-add-btn")
     page.fill("#promo-input", "aml100-l")
     page.click("#promo-check-btn")
     page.wait_for_selector("#promo-result:not(.hidden)")
@@ -190,7 +192,7 @@ with sync_playwright() as p:
     ok("DH180" in db["cards"]["ABC123"].get("promos", {}), "legacy promos preserved in card")
 
     # punch tab still works visually
-    page.click("#tab-punch")
+    if page.locator("#tab-punch").count(): page.click("#tab-punch")
     (OUT and page.screenshot(path=OUT + "/customer_punch.png"))
 
     # old admin page renders

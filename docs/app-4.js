@@ -20,8 +20,8 @@ var CARD_ID_KEY = "amali_card_id";
 
 // The punch code is set by staff on staff.html (Firestore: settings/punch).
 // The app keeps the last code it received, so it also works offline.
-// PUNCH_CODE is only the fallback for a phone that never reached Firestore.
-var PUNCH_CODE = "8525";
+// No code is written here on purpose — the repo is public.
+var PUNCH_CODE = "";
 var PUNCH_CODE_CACHE_KEY = "amali_punch_code";
 
 // Number pad for all-digit codes, full keyboard otherwise (set automatically).
@@ -51,6 +51,10 @@ var PROMO_LOCALSTORAGE_KEY = "amali_used_promos";
 var ACTIVE_PROMO_KEY = "amali_active_promo";
 
 var GIFT_CODE_RE = /^[A-Z0-9-]{4,24}$/;
+
+// Café Wi-Fi shown by the "וויפי" button (a website can't join Wi-Fi by itself).
+var WIFI_SSID = "AMALI_Guest";
+var WIFI_PASSWORD = "0505972008";
 
 // ============================================================
 // SAVE WITH GOOGLE — only a one-way hash of the Google account number is stored
@@ -209,6 +213,8 @@ var googleBtnSlotEl = document.getElementById("google-btn-slot");
 var googleStatusEl = document.getElementById("google-status");
 var googleCancelEl = document.getElementById("google-cancel");
 var restoreGoogleLinkEl = document.getElementById("restore-google-link");
+var bannerGoogleSlotEl = document.getElementById("app-banner-gbtn");
+var wifiViewEl = document.getElementById("wifi-view");
 
 // Promo (gift card) elements
 var promoInputEl = document.getElementById("promo-input");
@@ -597,6 +603,7 @@ function showAllViews(show) {
   cardBackupRestoreViewEl.classList.add("hidden");
   cardSettingsViewEl.classList.add("hidden");
   googleViewEl.classList.add("hidden");
+  wifiViewEl.classList.add("hidden");
   show.classList.remove("hidden");
 }
 
@@ -992,7 +999,8 @@ function getPunchCode() {
 }
 
 function applyPunchInputMode() {
-  codeInputEl.setAttribute("inputmode", /^[0-9]+$/.test(getPunchCode()) ? "numeric" : "text");
+  var code = getPunchCode();
+  codeInputEl.setAttribute("inputmode", (!code || /^[0-9]+$/.test(code)) ? "numeric" : "text");
 }
 
 // Fetch the current code from Firestore. callback(code|null) — null when unreachable.
@@ -1495,6 +1503,10 @@ function updateGoogleMenuItem() {
 }
 
 function showGoogleStatus(text, type) {
+  if (googleViewEl.classList.contains("hidden") || cardBackupOverlayEl.classList.contains("hidden")) {
+    if (type === "error") showToast(text, 3000);
+    return;
+  }
   googleStatusEl.textContent = text;
   googleStatusEl.className = "status-message" + (type ? " " + type : "");
 }
@@ -1529,22 +1541,34 @@ function openGoogleView() {
   }
   if (!db) { showGoogleStatus("אין חיבור כרגע, נסו שוב", "error"); return; }
 
+  renderGoogleButton(googleBtnSlotEl, function () {
+    showGoogleStatus("לא הצלחנו לטעון את Google, נסו שוב", "error");
+  });
+}
+
+var googleInitDone = false;
+// Draws Google's own "המשך עם Google" button into el (waits for Google's script).
+function renderGoogleButton(el, onFail) {
   var tries = 0;
   (function waitForGoogle() {
     if (window.google && google.accounts && google.accounts.id) {
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleCredential,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        use_fedcm_for_prompt: true
-      });
-      google.accounts.id.renderButton(googleBtnSlotEl, {
-        type: "standard", theme: "outline", size: "large", text: "continue_with", shape: "pill", locale: "he", width: 260
+      if (!googleInitDone) {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredential,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: true
+        });
+        googleInitDone = true;
+      }
+      el.innerHTML = "";
+      google.accounts.id.renderButton(el, {
+        type: "standard", theme: "filled_blue", size: "large", text: "continue_with", shape: "pill", locale: "he", width: 260
       });
       return;
     }
-    if (++tries > 40) { showGoogleStatus("לא הצלחנו לטעון את Google, נסו שוב", "error"); return; }
+    if (++tries > 40) { if (onFail) onFail(); return; }
     setTimeout(waitForGoogle, 150);
   })();
 }
@@ -1568,6 +1592,8 @@ function handleGoogleCredential(response) {
 }
 
 function handleGoogleAccount(hash) {
+  ensureCardId();
+  if (!db) { showGoogleStatus("אין חיבור כרגע, נסו שוב", "error"); return; }
   var ref = db.collection("accounts").doc(hash);
   ref.get().then(function (doc) {
     var linkedCard = doc.exists ? doc.data().cardId : null;
@@ -1616,6 +1642,19 @@ function handleGoogleAccount(hash) {
   });
 }
 
+// ---- Wi-Fi ----
+document.getElementById("wifi-btn").addEventListener("click", function () {
+  document.getElementById("wifi-ssid").textContent = WIFI_SSID;
+  document.getElementById("wifi-password").textContent = WIFI_PASSWORD;
+  showAllViews(wifiViewEl);
+  cardBackupOverlayEl.classList.remove("hidden");
+  appEl.setAttribute("aria-hidden", "true");
+});
+document.getElementById("wifi-copy-btn").addEventListener("click", function () {
+  copyCode(WIFI_PASSWORD, this);
+});
+document.getElementById("wifi-close-btn").addEventListener("click", hideCardBackupModal);
+
 moreGoogleBtnEl.addEventListener("click", function () {
   if (isGoogleLinked()) return;
   openGoogleView();
@@ -1631,14 +1670,20 @@ var BANNER_DISMISSED_KEY = "amali_banner_dismissed";
 var openInstallHint = null; // set when this phone can add the app to the home screen
 var currentBanner = null;
 
+var GOOGLE_BANNER_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000; // closed Google banner returns after a week
+
 function bannerDismissed(type) {
-  try { return (JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {})[type] === true; } catch (e) { return false; }
+  try {
+    var v = (JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {})[type];
+    if (v === true) return true;
+    return typeof v === "number" && Date.now() - v < GOOGLE_BANNER_SNOOZE_MS;
+  } catch (e) { return false; }
 }
 
 function dismissBanner(type) {
   try {
     var d = JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {};
-    d[type] = true;
+    d[type] = type === "google" ? Date.now() : true;
     localStorage.setItem(BANNER_DISMISSED_KEY, JSON.stringify(d));
   } catch (e) {}
 }
@@ -1646,16 +1691,29 @@ function dismissBanner(type) {
 function updateBanner() {
   currentBanner = null;
   // Shown from the second punch on, so a first-time customer sees only the card.
-  var ready = state.punches >= 2;
-  if (ready && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("google")) currentBanner = "google";
-  else if (ready && openInstallHint && !bannerDismissed("install")) currentBanner = "install";
-  if (!currentBanner) { bannerEl.classList.add("hidden"); return; }
+  // Google: from the first punch (a brand-new customer sees only the card).
+  var hasPunches = state.punches >= 1 || state.celebrationPending;
+  if (hasPunches && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("google")) currentBanner = "google";
+  else if (state.punches >= 2 && openInstallHint && !bannerDismissed("install")) currentBanner = "install";
+  if (!currentBanner) { bannerEl.classList.add("hidden"); bannerEl.classList.remove("app-banner--google"); return; }
+  var wasGoogle = bannerEl.classList.contains("app-banner--google") && !bannerEl.classList.contains("hidden");
   if (currentBanner === "google") {
-    bannerTitleEl.textContent = "שלא תאבדו ניקובים";
-    bannerBtnEl.textContent = "שמירה עם Google";
+    bannerTitleEl.textContent = "שמרו את הכרטיסייה";
+    bannerBtnEl.classList.add("hidden");
+    bannerGoogleSlotEl.classList.remove("hidden");
+    bannerEl.classList.add("app-banner--google");
+    if (!wasGoogle) renderGoogleButton(bannerGoogleSlotEl, function () {
+      // Google's script didn't load: fall back to a plain button that opens the sheet.
+      bannerGoogleSlotEl.classList.add("hidden");
+      bannerBtnEl.textContent = "שמירה עם Google";
+      bannerBtnEl.classList.remove("hidden");
+    });
   } else {
     bannerTitleEl.textContent = "הוסיפו את עמלי למסך הבית";
     bannerBtnEl.textContent = "איך מוסיפים";
+    bannerBtnEl.classList.remove("hidden");
+    bannerGoogleSlotEl.classList.add("hidden");
+    bannerEl.classList.remove("app-banner--google");
   }
   bannerEl.classList.remove("hidden");
 }

@@ -20,8 +20,8 @@ var CARD_ID_KEY = "amali_card_id";
 
 // The punch code is set by staff on staff.html (Firestore: settings/punch).
 // The app keeps the last code it received, so it also works offline.
-// PUNCH_CODE is only the fallback for a phone that never reached Firestore.
-var PUNCH_CODE = "8525";
+// No code is written here on purpose — the repo is public.
+var PUNCH_CODE = "";
 var PUNCH_CODE_CACHE_KEY = "amali_punch_code";
 
 // Number pad for all-digit codes, full keyboard otherwise (set automatically).
@@ -999,7 +999,8 @@ function getPunchCode() {
 }
 
 function applyPunchInputMode() {
-  codeInputEl.setAttribute("inputmode", /^[0-9]+$/.test(getPunchCode()) ? "numeric" : "text");
+  var code = getPunchCode();
+  codeInputEl.setAttribute("inputmode", (!code || /^[0-9]+$/.test(code)) ? "numeric" : "text");
 }
 
 // Fetch the current code from Firestore. callback(code|null) — null when unreachable.

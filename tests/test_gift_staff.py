@@ -38,8 +38,13 @@ with sync_playwright() as p:
     page.evaluate("""() => {
       localStorage.clear();
       localStorage.setItem('__mockdb', JSON.stringify({cards: {
-        ABC123: {punches: 3, promos: {DH180: {remaining: 80, history: [{used: 100, date: '2026-09-01'}]}}},
-        XYZ789: {punches: 1, promos: {DH180: {remaining: 130, history: []}, NOAM110: {remaining: 60, history: []}}}
+        ABC123: {punches: 3, promos: {OLD180: {remaining: 80, history: [{used: 100, date: '2026-09-01'}]}}}
+      }, giftCodes: {
+        'OLD180': {amount: 180, remaining: 80, history: [], active: true, createdBy: 'test'},
+        'OLD110': {amount: 110, remaining: 60, history: [], active: true, createdBy: 'test'},
+        'OLD300-N': {amount: 300, remaining: 300, history: [], active: true, createdBy: 'test'},
+        'OLD100-L': {amount: 100, remaining: 100, history: [], active: true, createdBy: 'test'},
+        'OLD200': {amount: 200, remaining: 200, history: [], active: true, createdBy: 'test'}
       }}));
     }""")
     page.reload()
@@ -48,16 +53,8 @@ with sync_playwright() as p:
     page.wait_for_selector("#login-view:not(.hidden)")
     page.click("#login-btn")
     page.wait_for_selector("#staff-view:not(.hidden)")
-    ok(page.is_visible("#team-card") and page.is_visible("#import-card"), "owner sees team + import")
-    (OUT and page.screenshot(path=OUT + "/staff_owner_top.png", full_page=True))
-
-    page.click("#import-btn")
-    page.wait_for_function("document.querySelector('#import-status').classList.contains('success')")
-    db = page.evaluate("JSON.parse(localStorage.getItem('__mockdb'))")
-    gc = db["giftCodes"]
-    ok(set(gc) == {"DH180", "NOAM110", "AMAL300-N", "AML100-L", "GFU200"}, "import created 5 codes")
-    ok(gc["DH180"]["remaining"] == 80 and gc["NOAM110"]["remaining"] == 60 and gc["GFU200"]["remaining"] == 200, "import used lowest balances")
-    ok(page.is_hidden("#import-card"), "import card hidden after import")
+    ok(page.is_visible("#team-card"), "owner sees team management")
+    ok(page.locator("#import-card").count() == 0, "old-codes import is gone")
 
     # ---- create
     page.fill("#new-amount", "200")
@@ -71,7 +68,7 @@ with sync_playwright() as p:
     # duplicate custom code rejected
     page.fill("#new-amount", "50")
     page.click("#custom-code-details summary")
-    page.fill("#new-custom-code", "dh180")
+    page.fill("#new-custom-code", "old180")
     page.click("#create-btn")
     page.wait_for_function("document.querySelector('#create-status').classList.contains('error')")
     ok("כבר קיים" in page.inner_text("#create-status"), "duplicate custom code rejected")
@@ -98,8 +95,8 @@ with sync_playwright() as p:
     # list filter
     ok(page.locator("#codes-list .list-row").count() == 6, "list shows 6 active codes")
 
-    # ---- owner cancels AML100-L
-    page.fill("#redeem-code", "AML100-L")
+    # ---- owner cancels OLD100-L
+    page.fill("#redeem-code", "OLD100-L")
     page.click("#redeem-check-btn")
     page.wait_for_selector("#owner-code-actions:not(.hidden)")
     page.click("#toggle-active-btn")
@@ -128,16 +125,16 @@ with sync_playwright() as p:
     page.evaluate("window.__mockLoginEmail='dana.barista@gmail.com'; window.__mockLoginName='Dana B'")
     page.click("#login-btn")
     page.wait_for_selector("#staff-view:not(.hidden)")
-    ok(page.is_hidden("#team-card") and page.is_hidden("#import-card"), "barista: no owner sections")
+    ok(page.is_hidden("#team-card"), "barista: no owner sections")
     ok(page.inner_text("#user-name").strip() == "דנה", "barista name from staff list")
-    page.fill("#redeem-code", "DH180")
+    page.fill("#redeem-code", "OLD180")
     page.click("#redeem-check-btn")
     page.wait_for_selector("#redeem-details:not(.hidden)")
     ok(page.is_hidden("#owner-code-actions"), "barista cannot cancel")
     page.fill("#redeem-amount", "30")
     page.click("#redeem-btn")
     page.wait_for_function("document.querySelector('#redeem-status').classList.contains('success')")
-    ok(page.inner_text("#balance-amount").strip() == "50 ₪", "barista redeemed DH180 -> 50")
+    ok(page.inner_text("#balance-amount").strip() == "50 ₪", "barista redeemed OLD180 -> 50")
     page.fill("#new-amount", "100")
     page.click("#create-btn")
     page.wait_for_selector("#new-code-box:not(.hidden)")
@@ -149,8 +146,8 @@ with sync_playwright() as p:
     # ---- customer app
     page.evaluate("""() => {
       localStorage.setItem('amali_card_id', 'ABC123');
-      localStorage.setItem('amali_used_promos', JSON.stringify({DH180: {remaining: 80, history: []}}));
-      localStorage.setItem('amali_active_promo', 'DH180');
+      localStorage.setItem('amali_used_promos', JSON.stringify({OLD180: {remaining: 80, history: []}}));
+      localStorage.setItem('amali_active_promo', 'OLD180');
     }""")
     page.goto(BASE + PREFIX + "index.html?gift=" + new_code)
     page.wait_for_selector("#promo-result:not(.hidden)")
@@ -162,7 +159,7 @@ with sync_playwright() as p:
     page.click("#promo-back-btn")
     page.wait_for_function("document.querySelectorAll('#promo-history-list .promo-card-row').length === 2 && !document.querySelector('#promo-history-list').textContent.includes('…')")
     txt = page.inner_text("#promo-history-list")
-    ok("DH180" in txt and "50 ₪" in txt and new_code in txt, "saved list: migrated DH180 (50) + new code")
+    ok("OLD180" in txt and "50 ₪" in txt and new_code in txt, "saved list: migrated OLD180 (50) + new code")
     (OUT and page.screenshot(path=OUT + "/customer_list.png", full_page=True))
 
     if page.is_visible("#promo-add-btn"): page.click("#promo-add-btn")
@@ -172,24 +169,24 @@ with sync_playwright() as p:
     ok(True, "unknown code rejected")
 
     if page.is_visible("#promo-add-btn"): page.click("#promo-add-btn")
-    page.fill("#promo-input", "aml100-l")
+    page.fill("#promo-input", "old100-l")
     page.click("#promo-check-btn")
     page.wait_for_selector("#promo-result:not(.hidden)")
     ok(page.inner_text("#promo-amount").strip() == "בוטל", "cancelled code shows as cancelled")
     page.click("#promo-remove-btn"); page.click("#promo-remove-confirm-yes")
     saved = page.evaluate("JSON.parse(localStorage.getItem('amali_gift_codes'))")
-    ok("AML100-L" not in saved, "remove from my list")
+    ok("OLD100-L" not in saved, "remove from my list")
 
     # customer (signed out) cannot list codes or redeem
     r = page.evaluate("""() => firebase.firestore().collection('giftCodes').get().then(()=> 'allowed', e => e.code)""")
     ok(r == "permission-denied", "customer cannot list codes")
-    r = page.evaluate("""() => firebase.firestore().collection('giftCodes').doc('DH180').update({remaining: 0}).then(()=> 'allowed', e => e.code)""")
+    r = page.evaluate("""() => firebase.firestore().collection('giftCodes').doc('OLD180').update({remaining: 0}).then(()=> 'allowed', e => e.code)""")
     ok(r == "permission-denied", "customer cannot change balance")
 
     # cloud backup holds saved codes
     db = page.evaluate("JSON.parse(localStorage.getItem('__mockdb'))")
     ok(new_code in (db["cards"]["ABC123"].get("giftCodes") or []), "saved codes backed up to card")
-    ok("DH180" in db["cards"]["ABC123"].get("promos", {}), "legacy promos preserved in card")
+    ok("OLD180" in db["cards"]["ABC123"].get("promos", {}), "legacy promos preserved in card")
 
     # punch tab still works visually
     if page.locator("#tab-punch").count(): page.click("#tab-punch")

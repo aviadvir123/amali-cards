@@ -308,13 +308,6 @@
         <div class="status" id="team-status"></div>
       </section>
 
-      <!-- Owner: legacy import -->
-      <section class="card hidden" id="import-card">
-        <h2 class="card-title">ייבוא קודים מהמערכת הישנה</h2>
-        <p class="card-sub">פעם אחת בלבד: מעביר את הקודים שהיו כתובים בקוד האפליקציה, עם היתרה הנמוכה ביותר שנשמרה אצל לקוחות.</p>
-        <button type="button" class="btn" id="import-btn">ייבוא</button>
-        <div class="status" id="import-status"></div>
-      </section>
 
     </div>
   </main>
@@ -338,14 +331,6 @@
     // Customer app link, used when sharing a new code.
     var APP_URL = "https://aviadvir123.github.io/amali-cards/";
 
-    // Codes that were hardcoded in app.js before the move to Firestore.
-    var LEGACY_CODES = {
-      "DH180": 180,
-      "NOAM110": 110,
-      "AMAL300-N": 300,
-      "AML100-L": 100,
-      "GFU200": 200
-    };
 
     // No I, L, O, 0, 1 — easy to read aloud and type.
     var CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -458,10 +443,10 @@
     auth.onAuthStateChanged(function (user) {
       hide($("loading-view"));
       hide($("login-view")); hide($("denied-view")); hide($("staff-view")); hide($("user-box"));
-      hide($("team-card")); hide($("import-card")); hide($("redeem-details")); hide($("new-code-box"));
+      hide($("team-card")); hide($("redeem-details")); hide($("new-code-box"));
       current = null; allCodes = []; me.owner = false; lastCreated = "";
       $("redeem-code").value = "";
-      ["redeem-check-status", "redeem-status", "create-status", "team-status", "import-status", "punch-code-status"].forEach(function (id) {
+      ["redeem-check-status", "redeem-status", "create-status", "team-status", "punch-code-status"].forEach(function (id) {
         setStatus($(id), "");
       });
       if (!user) { show($("login-view")); return; }
@@ -495,7 +480,6 @@
     // ============================================================
     // PUNCH CODE (settings/punch) — the customer app reads it
     // ============================================================
-    var DEFAULT_PUNCH_CODE = "8525"; // = PUNCH_CODE fallback in app.js
     var settingsRef = db.collection("settings").doc("punch");
 
     function loadPunchCode() {
@@ -505,7 +489,7 @@
           $("punch-code-value").textContent = d.code;
           $("punch-code-meta").textContent = d.updatedBy ? "עודכן ע״י " + d.updatedBy : "";
         } else {
-          $("punch-code-value").textContent = DEFAULT_PUNCH_CODE;
+          $("punch-code-value").textContent = "—";
           $("punch-code-meta").textContent = "";
         }
       }).catch(function (err) {
@@ -561,7 +545,6 @@
           return tb - ta;
         });
         renderList();
-        updateImportCard();
       }).catch(function (err) {
         $("codes-list").innerHTML = "";
         var p = document.createElement("div");
@@ -979,61 +962,6 @@
       }).then(updateTeamBtn);
     });
 
-    // ============================================================
-    // LEGACY IMPORT (owners, one time)
-    // ============================================================
-    function pendingLegacy() {
-      return Object.keys(LEGACY_CODES).filter(function (code) {
-        return !allCodes.some(function (c) { return c.id === code; });
-      });
-    }
-
-    function updateImportCard() {
-      if (me.owner && pendingLegacy().length > 0) show($("import-card")); else hide($("import-card"));
-    }
-
-    $("import-btn").addEventListener("click", function () {
-      var pending = pendingLegacy();
-      if (pending.length === 0) return;
-      $("import-btn").disabled = true;
-      setStatus($("import-status"), "קורא נתונים מכרטיסי לקוחות...");
-
-      // Lowest remaining balance any customer device reported for each code.
-      db.collection("cards").get().then(function (snap) {
-        var lowest = {};
-        snap.forEach(function (doc) {
-          var promos = doc.data().promos || {};
-          Object.keys(promos).forEach(function (code) {
-            var r = promos[code] && promos[code].remaining;
-            if (typeof r !== "number" || isNaN(r)) return;
-            if (lowest[code] === undefined || r < lowest[code]) lowest[code] = r;
-          });
-        });
-
-        var batch = db.batch();
-        var report = [];
-        pending.forEach(function (code) {
-          var amount = LEGACY_CODES[code];
-          var remaining = lowest[code] === undefined ? amount : Math.max(0, Math.min(amount, Math.round(lowest[code])));
-          batch.set(codesCol.doc(code), {
-            amount: amount,
-            remaining: remaining,
-            note: "יובא מהמערכת הישנה" + (remaining < amount ? " · מומשו " + shekel(amount - remaining) : ""),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            createdBy: me.name.slice(0, 60),
-            history: [],
-            active: true
-          });
-          report.push(code + ": " + shekel(remaining));
-        });
-        return batch.commit().then(function () { return report; });
-      }).then(function (report) {
-        setStatus($("import-status"), "יובאו " + report.length + " קודים — " + report.join(" · "), "success");
-        return loadCodes();
-      }).catch(function (err) {
-        setStatus($("import-status"), friendlyError(err), "error");
-      }).then(function () { $("import-btn").disabled = false; });
-    });
 
   })();
   </script>

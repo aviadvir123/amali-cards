@@ -1482,3 +1482,7 @@ body.celebration-active {
 .app-banner-gbtn { min-height: 44px; display: flex; justify-content: center; }
 
 .social-link--wifi { background: none; border: none; padding: 0; cursor: pointer; color: var(--brand-blue); }
+
+.footer-links { justify-content: center; }
+.footer-links .social-links { gap: 14px; }
+.social-link--jobs-icon { color: var(--brand-blue); }

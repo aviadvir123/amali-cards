@@ -13,10 +13,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-2.css">
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
-  <script src="app.js" defer></script>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script src="app-2.js" defer></script>
   <title>עמלי - כרטיס ניקוב</title>
 </head>
 <body>
@@ -33,13 +34,10 @@
     <!-- Header / Logo -->
     <header class="header">
       <img src="logo.png" alt="עמלי - Amali" class="header-logo">
+      <button type="button" id="more-btn" class="more-btn" aria-label="עוד">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
     </header>
-
-    <!-- Tab bar -->
-    <nav class="tab-bar">
-      <button type="button" id="tab-punch" class="tab-btn tab-btn--active">כרטיס ניקוב</button>
-      <button type="button" id="tab-promo" class="tab-btn">כרטיס מתנה</button>
-    </nav>
 
     <!-- Toast notification -->
     <div id="toast" class="toast hidden" aria-live="polite"></div>
@@ -71,6 +69,7 @@
 
       <!-- Code entry -->
       <section class="code-section">
+        <div class="code-row">
         <input
           type="password"
           id="code-input"
@@ -82,22 +81,25 @@
           autocomplete="off"
         >
         <button type="button" id="punch-btn" class="punch-btn" disabled>קדימה</button>
+        </div>
         <div id="status-message" class="status-message hidden" role="status" aria-live="polite"></div>
       </section>
 
     </div>
 
     <!-- Promo section (gift cards) -->
-    <div id="promo-section" class="hidden">
+    <div id="promo-section" class="promo-section">
 
       <!-- My saved gift cards -->
       <div id="promo-history" class="promo-history promo-my-cards hidden">
-        <p class="promo-history-title">כרטיסי המתנה שלי</p>
+        <p class="section-label">כרטיסי מתנה</p>
         <div id="promo-history-list"></div>
       </div>
 
+      <button type="button" id="promo-add-btn" class="promo-add-btn">+ יש לי קוד מתנה</button>
+
       <!-- Entry state -->
-      <div id="promo-entry">
+      <div id="promo-entry" class="hidden">
         <section class="code-section promo-code-section">
           <p class="quantity-label">הזינו קוד מתנה</p>
           <input
@@ -136,59 +138,52 @@
 
     </div>
 
+    <!-- One banner at a time (install hint / Google save) -->
+    <section id="app-banner" class="app-banner hidden" aria-live="polite">
+      <button type="button" id="app-banner-close" class="app-banner-close" aria-label="סגירה">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+      <p id="app-banner-title" class="app-banner-title"></p>
+      <button type="button" id="app-banner-btn" class="app-banner-btn"></button>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
-      <div class="social-footer">
-          <!-- Row 1: Social media -->
-          <div class="social-links">
-            <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="social-link social-link--maps" aria-label="Google Maps">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
-            </a>
-            <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link social-link--instagram" aria-label="Instagram">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                <circle cx="12" cy="12" r="4.5"/>
-                <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
-              </svg>
-            </a>
-            <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link social-link--facebook" aria-label="Facebook">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-              </svg>
-            </a>
-            <a href="https://www.amaliroast.com" target="_blank" rel="noopener" class="social-link social-link--website" aria-label="אתר האינטרנט">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9"/>
-                <line x1="3" y1="12" x2="21" y2="12"/>
-                <path d="M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9z"/>
-              </svg>
-            </a>
-          </div>
-
-          <!-- Row 2: App utility icons -->
-          <div class="social-links">
-            <button type="button" id="my-card-btn" class="social-link social-link--card" aria-label="הכרטיס שלי">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="8" r="4"/>
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-              </svg>
-            </button>
-            <button type="button" id="a2hs-btn" class="social-link a2hs-btn hidden" aria-label="הוסיפו למסך הבית">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="4"/>
-                <line x1="12" y1="8" x2="12" y2="16"/>
-                <line x1="8" y1="12" x2="16" y2="12"/>
-              </svg>
-            </button>
-            <div id="utility-divider" class="hidden"></div>
-            <a href="https://www.bitpay.co.il/app/me/D0C4AE40-6CF5-697D-DDC4-7B6C45BFA6080FE7" target="_blank" rel="noopener" class="bit-footer" aria-label="שלמו בBit">
-              <span class="bit-footer-label">bit</span>
-            </a>
-            <div class="social-divider"></div>
-            <a href="https://forms.gle/7vKbKuAPGsU5w6Jz8" target="_blank" rel="noopener" class="social-link--jobs" aria-label="הצטרפו לצוות">JOIN US</a>
-          </div>
+      <div class="footer-actions">
+        <a href="https://www.bitpay.co.il/app/me/D0C4AE40-6CF5-697D-DDC4-7B6C45BFA6080FE7" target="_blank" rel="noopener" class="footer-action">
+          <span class="bit-footer-label">bit</span>
+          <span>תשלום ב-bit</span>
+        </a>
+        <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="footer-action">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="footer-action-icon social-link--maps">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          <span>איך מגיעים</span>
+        </a>
+      </div>
+      <div class="footer-links">
+        <div class="social-links">
+          <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link social-link--instagram" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <circle cx="12" cy="12" r="4.5"/>
+              <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
+            </svg>
+          </a>
+          <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link social-link--facebook" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+            </svg>
+          </a>
+          <a href="https://www.amaliroast.com" target="_blank" rel="noopener" class="social-link social-link--website" aria-label="אתר האינטרנט">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <path d="M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9z"/>
+            </svg>
+          </a>
+        </div>
+        <a href="https://forms.gle/7vKbKuAPGsU5w6Jz8" target="_blank" rel="noopener" class="footer-jobs">דרושים לצוות</a>
       </div>
     </footer>
 
@@ -232,19 +227,35 @@
         <input type="text" id="card-backup-restore-input" class="code-input" dir="ltr" placeholder="AB34X7" maxlength="6" autocomplete="off" inputmode="text">
         <button type="button" id="card-backup-restore-btn" class="punch-btn" disabled>שחזור</button>
         <div id="card-backup-restore-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        <p class="card-backup-link hidden" id="restore-google-link">שחזור עם Google</p>
         <p class="card-backup-link" id="card-backup-switch-new">כרטיס חדש</p>
       </div>
 
-      <!-- Settings view -->
+      <!-- Save / restore with Google (only an encrypted ID is stored) -->
+      <div id="google-view" class="hidden">
+        <p class="card-backup-title">שמירה עם Google</p>
+        <p class="card-backup-desc">לא נשמרים שם או מייל</p>
+        <div id="google-btn-slot" class="google-btn-slot"></div>
+        <div id="google-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        <p class="card-backup-link" id="google-cancel">ביטול</p>
+      </div>
+
+      <!-- "עוד" menu (was "הכרטיס שלי") -->
       <div id="card-settings-view" class="hidden">
-        <p class="card-backup-title">הכרטיס שלי</p>
-        <p class="card-backup-desc">הקוד האישי שלכם — שמרו אותו לשחזור בכל מכשיר</p>
-        <div class="card-backup-id-wrap">
-          <div class="card-backup-id" id="card-settings-id-display"></div>
-          <button type="button" id="card-settings-copy-btn" class="card-backup-copy-btn" aria-label="העתקה">העתקה</button>
+        <p class="card-backup-title">עוד</p>
+        <div class="more-list">
+          <button type="button" id="more-google-btn" class="more-item hidden">שמירה עם Google</button>
+          <button type="button" id="card-settings-switch-replace" class="more-item">שחזור כרטיסייה</button>
+          <div class="more-item more-item--static">
+            <span>קוד גיבוי</span>
+            <span class="more-code">
+              <span id="card-settings-id-display" class="more-code-value" dir="ltr"></span>
+              <button type="button" id="card-settings-copy-btn" class="card-backup-copy-btn" aria-label="העתקת קוד הגיבוי">העתקה</button>
+            </span>
+          </div>
+          <button type="button" id="more-install-btn" class="more-item hidden">הוספה למסך הבית</button>
         </div>
-        <button type="button" id="card-settings-close-btn" class="punch-btn">סגור</button>
-        <p class="card-backup-link" id="card-settings-switch-replace">החלף כרטיס</p>
+        <button type="button" id="card-settings-close-btn" class="punch-btn">סגירה</button>
       </div>
 
     </div>

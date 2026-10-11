@@ -1,20 +1,39 @@
 #!/usr/bin/env python3
 """Copy the approved beta (docs/beta/) to production (docs/).
 
-Run from the repo root:  python3 tools/promote_beta.py
+Run from the repo root:  python3 tools/promote_beta.py <version>
+  e.g.  python3 tools/promote_beta.py 2
+
+- app.js / style.css are written under NEW names (app-<version>.js, style-<version>.css)
+  and index.html points at them. The previous files stay in place, so a phone that
+  still has the old page cached keeps loading the old, matching script — never a mix.
 - Restores asset paths ("../logo.png" -> "logo.png").
 - Removes the red "בטא" badge (everything between <!--BETA--> and <!--/BETA-->).
 Review `git diff docs/` before committing.
 """
-import re, pathlib
+import re, sys, pathlib
 
-FILES = ["index.html", "app.js", "style.css", "staff.html"]
+if len(sys.argv) != 2 or not re.fullmatch(r"[0-9A-Za-z_-]+", sys.argv[1]):
+    sys.exit("usage: python3 tools/promote_beta.py <version>")
+v = sys.argv[1]
 root = pathlib.Path(__file__).resolve().parent.parent / "docs"
 
-for name in FILES:
-    src = root / "beta" / name
-    s = src.read_text(encoding="utf-8")
+def clean(s):
     s = re.sub(r'\n?<!--BETA-->.*?<!--/BETA-->', "", s, flags=re.S)
-    s = re.sub(r'((?:href|src)=")\.\./', r"\1", s)
-    (root / name).write_text(s, encoding="utf-8")
-    print("promoted", name)
+    return re.sub(r'((?:href|src)=")\.\./', r"\1", s)
+
+js, css = f"app-{v}.js", f"style-{v}.css"
+for out in (js, css):
+    if (root / out).exists():
+        sys.exit(f"docs/{out} already exists — pick a new version")
+
+(root / js).write_text((root / "beta" / "app.js").read_text(encoding="utf-8"), encoding="utf-8")
+(root / css).write_text((root / "beta" / "style.css").read_text(encoding="utf-8"), encoding="utf-8")
+
+index = clean((root / "beta" / "index.html").read_text(encoding="utf-8"))
+assert index.count('src="app.js"') == 1 and index.count('href="style.css"') == 1
+index = index.replace('src="app.js"', f'src="{js}"').replace('href="style.css"', f'href="{css}"')
+(root / "index.html").write_text(index, encoding="utf-8")
+
+(root / "staff.html").write_text(clean((root / "beta" / "staff.html").read_text(encoding="utf-8")), encoding="utf-8")
+print(f"promoted: index.html -> {js}, {css}; staff.html")

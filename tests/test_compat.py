@@ -151,6 +151,13 @@ with sync_playwright() as p:
         page.click("#card-settings-close-btn")
         ok(not page.is_visible("#tab-punch") if page.locator("#tab-punch").count() else True, "no tabs")
 
+    if page.locator("#wifi-btn").count():
+        page.click("#wifi-btn")
+        ok(page.inner_text("#wifi-ssid").strip() == "AMALI_Guest" and page.inner_text("#wifi-password").strip() == "0505972008",
+           "Wi-Fi button shows network and password")
+        page.click("#wifi-close-btn")
+        ok(not page.is_visible("#wifi-view"), "Wi-Fi sheet closes")
+
     # ---------- C. punch code ----------
     open_app(page, {"amali_punch_card": card(1), "amali_card_id": "PUNC66"})
     punch(page, "8525")

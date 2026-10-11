@@ -52,6 +52,10 @@ var ACTIVE_PROMO_KEY = "amali_active_promo";
 
 var GIFT_CODE_RE = /^[A-Z0-9-]{4,24}$/;
 
+// Café Wi-Fi shown by the "וויפי" button (a website can't join Wi-Fi by itself).
+var WIFI_SSID = "AMALI_Guest";
+var WIFI_PASSWORD = "0505972008";
+
 // ============================================================
 // SAVE WITH GOOGLE — only a one-way hash of the Google account number is stored
 // (Firestore accounts/{hash} -> {cardId}). No name, no email, anywhere.
@@ -210,6 +214,7 @@ var googleStatusEl = document.getElementById("google-status");
 var googleCancelEl = document.getElementById("google-cancel");
 var restoreGoogleLinkEl = document.getElementById("restore-google-link");
 var bannerGoogleSlotEl = document.getElementById("app-banner-gbtn");
+var wifiViewEl = document.getElementById("wifi-view");
 
 // Promo (gift card) elements
 var promoInputEl = document.getElementById("promo-input");
@@ -598,6 +603,7 @@ function showAllViews(show) {
   cardBackupRestoreViewEl.classList.add("hidden");
   cardSettingsViewEl.classList.add("hidden");
   googleViewEl.classList.add("hidden");
+  wifiViewEl.classList.add("hidden");
   show.classList.remove("hidden");
 }
 
@@ -1634,6 +1640,19 @@ function handleGoogleAccount(hash) {
     showGoogleStatus("אין חיבור כרגע, נסו שוב", "error");
   });
 }
+
+// ---- Wi-Fi ----
+document.getElementById("wifi-btn").addEventListener("click", function () {
+  document.getElementById("wifi-ssid").textContent = WIFI_SSID;
+  document.getElementById("wifi-password").textContent = WIFI_PASSWORD;
+  showAllViews(wifiViewEl);
+  cardBackupOverlayEl.classList.remove("hidden");
+  appEl.setAttribute("aria-hidden", "true");
+});
+document.getElementById("wifi-copy-btn").addEventListener("click", function () {
+  copyCode(WIFI_PASSWORD, this);
+});
+document.getElementById("wifi-close-btn").addEventListener("click", hideCardBackupModal);
 
 moreGoogleBtnEl.addEventListener("click", function () {
   if (isGoogleLinked()) return;

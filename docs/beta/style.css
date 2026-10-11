@@ -1483,6 +1483,28 @@ body.celebration-active {
 
 .social-link--wifi { background: none; border: none; padding: 0; cursor: pointer; color: var(--brand-blue); }
 
-.footer-links { justify-content: center; }
-.footer-links .social-links { gap: 14px; }
-.social-link--jobs-icon { color: var(--brand-blue); }
+/* ============================================================
+   22. COMPACT LAYOUT — everything fits on one phone screen
+   ============================================================ */
+.header { padding: 8px 20px; }
+.header-logo { width: 132px; height: 58px; max-height: none; max-width: none; object-fit: cover; object-position: center 54%; outline: none; }
+.more-btn { width: 40px; height: 40px; }
+.card { margin-top: 12px; margin-bottom: 4px; padding: 14px 12px 10px; }
+.quantity-section { margin-bottom: 12px; }
+.quantity-label { margin-bottom: 6px; }
+.code-section { margin-bottom: 12px; }
+
+.app-banner { margin: 0 0 12px; padding: 10px 14px; gap: 8px; }
+.app-banner--google { padding: 10px 14px; }
+.app-banner-close { top: 0; left: 0; }
+
+.promo-section { padding-top: 10px; }
+.promo-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.promo-head .section-label { margin: 0; }
+.promo-head .promo-add-btn { padding: 6px 2px; min-height: 40px; font-size: 0.9rem; }
+.promo-section .promo-history-row { margin-bottom: 4px; }
+
+.footer { margin-top: 12px; padding-top: 12px; gap: 8px; padding-bottom: 12px; }
+.footer-action { height: 44px; }
+.footer-links { justify-content: space-between; }
+.footer-links .social-links { gap: 6px; }

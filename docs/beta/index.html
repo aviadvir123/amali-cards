@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#205082">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="עמלי">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="apple-touch-icon" href="../icon-192.png">
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+  <script src="app.js" defer></script>
+  <title>עמלי - כרטיס ניקוב</title>
+</head>
+<body>
+<!--BETA--><div style="position:fixed;bottom:0;left:0;z-index:9999;background:#C0392B;color:#fff;font:700 12px sans-serif;padding:3px 10px;border-top-right-radius:8px;pointer-events:none">בטא</div><!--/BETA-->
+
+  <!-- localStorage unavailable error (hidden by default) -->
+  <div id="storage-error" class="storage-error hidden">
+    <p class="storage-error-he">הדפדפן לא תומך בשמירת נתונים. נסו לפתוח בדפדפן רגיל.</p>
+    <p class="storage-error-en">Your browser doesn't support data storage. Please use a regular browser.</p>
+  </div>
+
+  <!-- Main app container -->
+  <div id="app" class="app-container">
+
+    <!-- Header / Logo -->
+    <header class="header">
+      <img src="../logo.png" alt="עמלי - Amali" class="header-logo">
+    </header>
+
+    <!-- Tab bar -->
+    <nav class="tab-bar">
+      <button type="button" id="tab-punch" class="tab-btn tab-btn--active">כרטיס ניקוב</button>
+      <button type="button" id="tab-promo" class="tab-btn">כרטיס מתנה</button>
+    </nav>
+
+    <!-- Toast notification -->
+    <div id="toast" class="toast hidden" aria-live="polite"></div>
+
+    <!-- Punch section -->
+    <div id="punch-section">
+
+      <!-- Punch card -->
+      <section class="card">
+        <div class="card-grid" dir="ltr">
+          <svg class="card-svg" viewBox="0 0 300 130" xmlns="http://www.w3.org/2000/svg" aria-label="כרטיס ניקוב">
+            <!-- Slots generated dynamically by app.js -->
+          </svg>
+        </div>
+        <p class="card-progress" dir="ltr"><span id="progress-count">0</span> / 10</p>
+      </section>
+
+      <p id="card-id-display" class="card-id-display hidden"></p>
+
+      <!-- Quantity selector -->
+      <section class="quantity-section">
+        <p class="quantity-label">כמה ניקובים?</p>
+        <div class="stepper" dir="ltr">
+          <button type="button" id="stepper-minus" class="stepper-btn stepper-minus" aria-label="הפחת ניקוב" disabled>-</button>
+          <span id="stepper-value" class="stepper-value" aria-live="polite">1</span>
+          <button type="button" id="stepper-plus" class="stepper-btn stepper-plus" aria-label="הוסף ניקוב">+</button>
+        </div>
+      </section>
+
+      <!-- Code entry -->
+      <section class="code-section">
+        <input
+          type="password"
+          id="code-input"
+          class="code-input"
+          dir="ltr"
+          inputmode="numeric"
+          placeholder="הזינו קוד"
+          aria-label="הזינו קוד"
+          autocomplete="off"
+        >
+        <button type="button" id="punch-btn" class="punch-btn" disabled>קדימה</button>
+        <div id="status-message" class="status-message hidden" role="status" aria-live="polite"></div>
+      </section>
+
+    </div>
+
+    <!-- Promo section (gift cards) -->
+    <div id="promo-section" class="hidden">
+
+      <!-- My saved gift cards -->
+      <div id="promo-history" class="promo-history promo-my-cards hidden">
+        <p class="promo-history-title">כרטיסי המתנה שלי</p>
+        <div id="promo-history-list"></div>
+      </div>
+
+      <!-- Entry state -->
+      <div id="promo-entry">
+        <section class="code-section promo-code-section">
+          <p class="quantity-label">הזינו קוד מתנה</p>
+          <input
+            type="text"
+            id="promo-input"
+            class="code-input"
+            dir="ltr"
+            inputmode="text"
+            placeholder="קוד מתנה"
+            aria-label="הזינו קוד מתנה"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          >
+          <button type="button" id="promo-check-btn" class="punch-btn" disabled>בדיקת יתרה</button>
+          <div id="promo-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <!-- Balance of one gift card -->
+      <div id="promo-result" class="promo-result hidden">
+        <p class="promo-balance-label">יתרה — <span id="promo-active-code-name" dir="ltr"></span></p>
+        <div class="promo-amount" id="promo-amount"></div>
+        <p class="promo-of-amount" id="promo-of-amount"></p>
+        <p class="promo-how-to">למימוש — אמרו את הקוד לבריסטה בקופה :)</p>
+        <div class="promo-usage hidden" id="promo-usage"></div>
+
+        <button type="button" id="promo-back-btn" class="punch-btn promo-action-btn">חזרה</button>
+        <button type="button" id="promo-remove-btn" class="promo-remove-btn">הסרה מהרשימה שלי</button>
+        <div id="promo-remove-confirm" class="promo-remove-confirm hidden">
+          <span class="promo-remove-confirm-text">בטוח?</span>
+          <button type="button" id="promo-remove-confirm-yes" class="promo-remove-confirm-btn promo-remove-confirm-yes">כן, הסר</button>
+          <button type="button" id="promo-remove-confirm-no" class="promo-remove-confirm-btn promo-remove-confirm-no">ביטול</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="social-footer">
+          <!-- Row 1: Social media -->
+          <div class="social-links">
+            <a href="https://maps.app.goo.gl/fThepLFqVYa66BPf9" target="_blank" rel="noopener" class="social-link social-link--maps" aria-label="Google Maps">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+            </a>
+            <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link social-link--instagram" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <circle cx="12" cy="12" r="4.5"/>
+                <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none"/>
+              </svg>
+            </a>
+            <a href="https://www.facebook.com/p/Amali-Roasters-61577075330664/" target="_blank" rel="noopener" class="social-link social-link--facebook" aria-label="Facebook">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+              </svg>
+            </a>
+            <a href="https://www.amaliroast.com" target="_blank" rel="noopener" class="social-link social-link--website" aria-label="אתר האינטרנט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <path d="M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9z"/>
+              </svg>
+            </a>
+          </div>
+
+          <!-- Row 2: App utility icons -->
+          <div class="social-links">
+            <button type="button" id="my-card-btn" class="social-link social-link--card" aria-label="הכרטיס שלי">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+              </svg>
+            </button>
+            <button type="button" id="a2hs-btn" class="social-link a2hs-btn hidden" aria-label="הוסיפו למסך הבית">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="4"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+              </svg>
+            </button>
+            <div id="utility-divider" class="hidden"></div>
+            <a href="https://www.bitpay.co.il/app/me/D0C4AE40-6CF5-697D-DDC4-7B6C45BFA6080FE7" target="_blank" rel="noopener" class="bit-footer" aria-label="שלמו בBit">
+              <span class="bit-footer-label">bit</span>
+            </a>
+            <div class="social-divider"></div>
+            <a href="https://forms.gle/7vKbKuAPGsU5w6Jz8" target="_blank" rel="noopener" class="social-link--jobs" aria-label="הצטרפו לצוות">JOIN US</a>
+          </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Install hint popup -->
+  <div id="a2hs-popup" class="a2hs-popup hidden" role="dialog">
+    <p id="a2hs-popup-text" class="a2hs-popup-text"></p>
+    <button type="button" id="a2hs-popup-close" class="a2hs-popup-close">הבנתי</button>
+  </div>
+  <div id="a2hs-backdrop" class="a2hs-backdrop hidden"></div>
+
+  <!-- Card backup modal -->
+  <div id="card-backup-overlay" class="card-backup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="card-backup-title">
+    <div class="card-backup-modal">
+
+      <!-- Choice view (shown for new users with no punches) -->
+      <div id="card-backup-choice-view" class="hidden">
+        <p class="card-backup-title" id="card-backup-title">ברוכים הבאים לעמלי</p>
+        <p class="card-backup-desc">כרטיס הניקובים הדיגיטלי שלכם</p>
+        <button type="button" id="card-backup-choice-new-btn" class="punch-btn">כרטיס חדש</button>
+        <p class="card-backup-link" id="card-backup-choice-restore">יש לי קוד קיים</p>
+      </div>
+
+      <!-- New card view (shown for migration or after choosing "new") -->
+      <div id="card-backup-new-view">
+        <p class="card-backup-title" id="card-backup-title">שמרו את הכרטיס שלכם</p>
+        <p class="card-backup-desc" id="card-backup-new-desc">זה הקוד האישי שלכם. שמרו אותו — תוכלו לשחזר את הניקובים מכל מכשיר.</p>
+        <div class="card-backup-id-wrap">
+          <div class="card-backup-id" id="card-backup-id-display"></div>
+          <button type="button" id="card-backup-copy-btn" class="card-backup-copy-btn" aria-label="העתקה">העתקה</button>
+        </div>
+        <button type="button" id="card-backup-gotit-btn" class="punch-btn">הבנתי</button>
+        <p class="card-backup-link" id="card-backup-switch-restore">יש לי קוד קיים</p>
+      </div>
+
+      <!-- Restore view -->
+      <div id="card-backup-restore-view" class="hidden">
+        <p class="card-backup-title">שחזור כרטיס</p>
+        <p class="card-backup-desc">הזינו את הקוד שלכם</p>
+        <input type="text" id="card-backup-restore-input" class="code-input" dir="ltr" placeholder="AB34X7" maxlength="6" autocomplete="off" inputmode="text">
+        <button type="button" id="card-backup-restore-btn" class="punch-btn" disabled>שחזור</button>
+        <div id="card-backup-restore-status" class="status-message hidden" role="status" aria-live="polite"></div>
+        <p class="card-backup-link" id="card-backup-switch-new">כרטיס חדש</p>
+      </div>
+
+      <!-- Settings view -->
+      <div id="card-settings-view" class="hidden">
+        <p class="card-backup-title">הכרטיס שלי</p>
+        <p class="card-backup-desc">הקוד האישי שלכם — שמרו אותו לשחזור בכל מכשיר</p>
+        <div class="card-backup-id-wrap">
+          <div class="card-backup-id" id="card-settings-id-display"></div>
+          <button type="button" id="card-settings-copy-btn" class="card-backup-copy-btn" aria-label="העתקה">העתקה</button>
+        </div>
+        <button type="button" id="card-settings-close-btn" class="punch-btn">סגור</button>
+        <p class="card-backup-link" id="card-settings-switch-replace">החלף כרטיס</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Celebration overlay (hidden by default) -->
+  <div id="celebration" class="celebration-overlay" role="dialog" aria-modal="true" aria-labelledby="celebration-title">
+    <div class="confetti-container">
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+      <div class="confetti confetti-diamond"></div>
+      <div class="confetti confetti-circle"></div>
+      <div class="confetti confetti-hexagon"></div>
+      <div class="confetti confetti-triangle"></div>
+      <div class="confetti confetti-square"></div>
+    </div>
+    <div class="celebration-content">
+      <h2 id="celebration-title" class="celebration-line1">הקפה הזה על חשבוננו :)</h2>
+      <button type="button" id="celebration-close" class="celebration-close-btn">כרטיסיה חדשה</button>
+    </div>
+  </div>
+
+
+</body>
+</html>

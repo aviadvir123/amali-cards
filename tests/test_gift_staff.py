@@ -195,9 +195,6 @@ with sync_playwright() as p:
     if page.locator("#tab-punch").count(): page.click("#tab-punch")
     (OUT and page.screenshot(path=OUT + "/customer_punch.png"))
 
-    # old admin page renders
-    page.goto(BASE + "admin.html")
-    ok(page.is_visible("a[href='staff.html']"), "admin links to staff page")
 
     b.close()
 

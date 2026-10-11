@@ -15,7 +15,7 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 - Staff page `docs/staff.html`: Google sign-in, create codes (random by default), redeem, list, cancel. Owners also manage the team and ran the one-time legacy import.
 - Customers only look up a code they know and see its balance; the barista redeems.
 - Security is enforced by `firestore.rules` (paste into Firebase Console → Firestore → Rules). Owners = `ownerEmails()` there and `OWNER_EMAILS` in `staff.html` — keep both in sync.
-- Production is `docs/`; `src/` is a stale copy.
+- Production is `docs/` (served by GitHub Pages from `main`).
 
 ## Releasing changes safely (existing customers must never lose data)
 - Build in `docs/beta/` first (live at /amali-cards/beta/, same origin as production, so it reads the real cards on each phone). Red "בטא" badge marks it.

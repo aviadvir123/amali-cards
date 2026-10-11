@@ -11,7 +11,7 @@ Run from the repo root:  python3 tools/promote_beta.py <version>
 - Removes the red "בטא" badge (everything between <!--BETA--> and <!--/BETA-->).
 Review `git diff docs/` before committing.
 """
-import re, sys, pathlib
+import re, sys, shutil, pathlib
 
 if len(sys.argv) != 2 or not re.fullmatch(r"[0-9A-Za-z_-]+", sys.argv[1]):
     sys.exit("usage: python3 tools/promote_beta.py <version>")
@@ -36,6 +36,10 @@ index, n_js = re.subn(r'src="app\.js(\?v=[^"]*)?"', f'src="{js}"', index)
 index, n_css = re.subn(r'href="style\.css(\?v=[^"]*)?"', f'href="{css}"', index)
 assert n_js == 1 and n_css == 1, "beta index.html must load app.js and style.css once"
 (root / "index.html").write_text(index, encoding="utf-8")
+
+# punch-card icon images (if the beta has them)
+if (root / "beta" / "icons").is_dir():
+    shutil.copytree(root / "beta" / "icons", root / "icons", dirs_exist_ok=True)
 
 (root / "staff.html").write_text(clean((root / "beta" / "staff.html").read_text(encoding="utf-8")), encoding="utf-8")
 print(f"promoted: index.html -> {js}, {css}; staff.html")

@@ -197,7 +197,7 @@ with sync_playwright() as p:
             ok(page.is_visible("#app-banner") and "Google" in page.inner_text("#app-banner"), "banner offers saving with Google (5 punches)")
             page.click("#more-btn")
             page.click("#more-google-btn")
-            page.click("#mock-google-btn")
+            page.click("#google-btn-slot #mock-google-btn")
             page.wait_for_function("localStorage.getItem('amali_google_linked') === '1'", timeout=4000)
             db = mockdb(page)
             accts = db.get("accounts", {})
@@ -213,13 +213,35 @@ with sync_playwright() as p:
             ok("✓" in page.inner_text("#more-google-btn"), "menu shows saved ✓")
             page.click("#card-settings-close-btn")
 
+            saved_cloud = mockdb(page)  # GOOG11 saved with Google — reused by the restore tests below
+
+            if page.locator("#app-banner-gbtn").count():  # prominent banner (from beta v3)
+                # one tap from the banner, right under the punch area, from the first punch
+                open_app(page, {"amali_punch_card": card(1), "amali_card_id": "BANR44"}, {})
+                ok(page.is_visible("#app-banner #mock-google-btn"), "first punch: banner with Google's button shows")
+                box_b, box_g = page.locator("#app-banner").bounding_box(), page.locator("#promo-section").bounding_box()
+                ok(box_b["y"] < box_g["y"], "banner sits above the gift cards, under the punch area")
+                page.click("#app-banner #mock-google-btn")
+                page.wait_for_function("localStorage.getItem('amali_google_linked') === '1'", timeout=4000)
+                ok(any(v.get("cardId") == "BANR44" for v in mockdb(page).get("accounts", {}).values()), "saved with one tap from the banner")
+                ok(not page.is_visible("#app-banner"), "banner disappears once saved")
+
+                # closing the banner snoozes it for a week
+                open_app(page, {"amali_punch_card": card(3), "amali_card_id": "SNOZ55"}, {})
+                page.click("#app-banner-close")
+                ok(not page.is_visible("#app-banner"), "closed banner hides")
+                page.reload(); page.wait_for_timeout(600)
+                ok(not page.is_visible("#app-banner"), "stays hidden after reopening")
+                page.evaluate("localStorage.setItem('amali_banner_dismissed', JSON.stringify({google: Date.now() - 8*864e5}))")
+                page.reload(); page.wait_for_timeout(600)
+                ok(page.is_visible("#app-banner"), "comes back after a week")
+
             # new phone / Safari wiped: empty card, restore with Google
-            saved_cloud = mockdb(page)
             open_app(page, {}, saved_cloud)
             page.click("#more-btn")
             page.click("#card-settings-switch-replace")
             page.click("#restore-google-link")
-            page.click("#mock-google-btn")
+            page.click("#google-btn-slot #mock-google-btn")
             page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
             ok(ls(page).get("amali_card_id") == "GOOG11", "new phone: Google brings back the same card (5 punches)")
 
@@ -227,7 +249,7 @@ with sync_playwright() as p:
             open_app(page, {"amali_punch_card": card(2), "amali_card_id": "OTHR22"}, saved_cloud)
             page.click("#more-btn")
             page.click("#more-google-btn")
-            page.click("#mock-google-btn")
+            page.click("#google-btn-slot #mock-google-btn")
             page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
             c2 = mockdb(page)["cards"].get("OTHR22") if "cards" in mockdb(page) else None
             ok(ls(page).get("amali_card_id") == "GOOG11", "phone with another card asks, then switches to the saved one")

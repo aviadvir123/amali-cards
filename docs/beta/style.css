@@ -1468,3 +1468,15 @@ body.celebration-active {
   align-items: center;
   margin: 8px 0 4px;
 }
+
+/* Google save banner: sits right under the punch area, stands out */
+.app-banner { margin: 4px 0 18px; }
+.app-banner--google {
+  background: var(--white);
+  border: 2px solid var(--brand-blue);
+  align-items: center;
+  text-align: center;
+  padding: 16px;
+}
+.app-banner--google .app-banner-title { margin: 0 36px; font-size: 1.05rem; }
+.app-banner-gbtn { min-height: 44px; display: flex; justify-content: center; }

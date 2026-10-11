@@ -209,6 +209,7 @@ var googleBtnSlotEl = document.getElementById("google-btn-slot");
 var googleStatusEl = document.getElementById("google-status");
 var googleCancelEl = document.getElementById("google-cancel");
 var restoreGoogleLinkEl = document.getElementById("restore-google-link");
+var bannerGoogleSlotEl = document.getElementById("app-banner-gbtn");
 
 // Promo (gift card) elements
 var promoInputEl = document.getElementById("promo-input");
@@ -1495,6 +1496,10 @@ function updateGoogleMenuItem() {
 }
 
 function showGoogleStatus(text, type) {
+  if (googleViewEl.classList.contains("hidden") || cardBackupOverlayEl.classList.contains("hidden")) {
+    if (type === "error") showToast(text, 3000);
+    return;
+  }
   googleStatusEl.textContent = text;
   googleStatusEl.className = "status-message" + (type ? " " + type : "");
 }
@@ -1529,22 +1534,34 @@ function openGoogleView() {
   }
   if (!db) { showGoogleStatus("אין חיבור כרגע, נסו שוב", "error"); return; }
 
+  renderGoogleButton(googleBtnSlotEl, function () {
+    showGoogleStatus("לא הצלחנו לטעון את Google, נסו שוב", "error");
+  });
+}
+
+var googleInitDone = false;
+// Draws Google's own "המשך עם Google" button into el (waits for Google's script).
+function renderGoogleButton(el, onFail) {
   var tries = 0;
   (function waitForGoogle() {
     if (window.google && google.accounts && google.accounts.id) {
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleCredential,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        use_fedcm_for_prompt: true
-      });
-      google.accounts.id.renderButton(googleBtnSlotEl, {
-        type: "standard", theme: "outline", size: "large", text: "continue_with", shape: "pill", locale: "he", width: 260
+      if (!googleInitDone) {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredential,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: true
+        });
+        googleInitDone = true;
+      }
+      el.innerHTML = "";
+      google.accounts.id.renderButton(el, {
+        type: "standard", theme: "filled_blue", size: "large", text: "continue_with", shape: "pill", locale: "he", width: 260
       });
       return;
     }
-    if (++tries > 40) { showGoogleStatus("לא הצלחנו לטעון את Google, נסו שוב", "error"); return; }
+    if (++tries > 40) { if (onFail) onFail(); return; }
     setTimeout(waitForGoogle, 150);
   })();
 }
@@ -1568,6 +1585,8 @@ function handleGoogleCredential(response) {
 }
 
 function handleGoogleAccount(hash) {
+  ensureCardId();
+  if (!db) { showGoogleStatus("אין חיבור כרגע, נסו שוב", "error"); return; }
   var ref = db.collection("accounts").doc(hash);
   ref.get().then(function (doc) {
     var linkedCard = doc.exists ? doc.data().cardId : null;
@@ -1631,14 +1650,20 @@ var BANNER_DISMISSED_KEY = "amali_banner_dismissed";
 var openInstallHint = null; // set when this phone can add the app to the home screen
 var currentBanner = null;
 
+var GOOGLE_BANNER_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000; // closed Google banner returns after a week
+
 function bannerDismissed(type) {
-  try { return (JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {})[type] === true; } catch (e) { return false; }
+  try {
+    var v = (JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {})[type];
+    if (v === true) return true;
+    return typeof v === "number" && Date.now() - v < GOOGLE_BANNER_SNOOZE_MS;
+  } catch (e) { return false; }
 }
 
 function dismissBanner(type) {
   try {
     var d = JSON.parse(localStorage.getItem(BANNER_DISMISSED_KEY) || "{}") || {};
-    d[type] = true;
+    d[type] = type === "google" ? Date.now() : true;
     localStorage.setItem(BANNER_DISMISSED_KEY, JSON.stringify(d));
   } catch (e) {}
 }
@@ -1646,16 +1671,29 @@ function dismissBanner(type) {
 function updateBanner() {
   currentBanner = null;
   // Shown from the second punch on, so a first-time customer sees only the card.
-  var ready = state.punches >= 2;
-  if (ready && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("google")) currentBanner = "google";
-  else if (ready && openInstallHint && !bannerDismissed("install")) currentBanner = "install";
-  if (!currentBanner) { bannerEl.classList.add("hidden"); return; }
+  // Google: from the first punch (a brand-new customer sees only the card).
+  var hasPunches = state.punches >= 1 || state.celebrationPending;
+  if (hasPunches && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("google")) currentBanner = "google";
+  else if (state.punches >= 2 && openInstallHint && !bannerDismissed("install")) currentBanner = "install";
+  if (!currentBanner) { bannerEl.classList.add("hidden"); bannerEl.classList.remove("app-banner--google"); return; }
+  var wasGoogle = bannerEl.classList.contains("app-banner--google") && !bannerEl.classList.contains("hidden");
   if (currentBanner === "google") {
-    bannerTitleEl.textContent = "שלא תאבדו ניקובים";
-    bannerBtnEl.textContent = "שמירה עם Google";
+    bannerTitleEl.textContent = "שמרו את הכרטיסייה";
+    bannerBtnEl.classList.add("hidden");
+    bannerGoogleSlotEl.classList.remove("hidden");
+    bannerEl.classList.add("app-banner--google");
+    if (!wasGoogle) renderGoogleButton(bannerGoogleSlotEl, function () {
+      // Google's script didn't load: fall back to a plain button that opens the sheet.
+      bannerGoogleSlotEl.classList.add("hidden");
+      bannerBtnEl.textContent = "שמירה עם Google";
+      bannerBtnEl.classList.remove("hidden");
+    });
   } else {
     bannerTitleEl.textContent = "הוסיפו את עמלי למסך הבית";
     bannerBtnEl.textContent = "איך מוסיפים";
+    bannerBtnEl.classList.remove("hidden");
+    bannerGoogleSlotEl.classList.add("hidden");
+    bannerEl.classList.remove("app-banner--google");
   }
   bannerEl.classList.remove("hidden");
 }

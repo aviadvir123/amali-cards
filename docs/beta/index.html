@@ -13,11 +13,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=5">
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="https://accounts.google.com/gsi/client" async></script>
-  <script src="app.js" defer></script>
+  <script src="app.js?v=5" defer></script>
   <title>עמלי - כרטיס ניקוב</title>
 </head>
 <body>
@@ -35,8 +35,8 @@
     <!-- Header / Logo -->
     <header class="header">
       <img src="../logo.png" alt="עמלי - Amali" class="header-logo">
-      <button type="button" id="more-btn" class="more-btn" aria-label="עוד">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      <button type="button" id="more-btn" class="more-btn" aria-label="הכרטיס שלי">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </button>
     </header>
 
@@ -163,13 +163,12 @@
           </svg>
           <span>איך מגיעים</span>
         </a>
-        <button type="button" id="wifi-btn" class="footer-action">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="footer-action-icon"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
-          <span>וויפי</span>
-        </button>
       </div>
       <div class="footer-links">
         <div class="social-links">
+          <button type="button" id="wifi-btn" class="social-link social-link--wifi" aria-label="וויפי">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+          </button>
           <a href="https://www.instagram.com/amali.roasters/?hl=he" target="_blank" rel="noopener" class="social-link social-link--instagram" aria-label="Instagram">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
@@ -268,7 +267,7 @@
 
       <!-- "עוד" menu (was "הכרטיס שלי") -->
       <div id="card-settings-view" class="hidden">
-        <p class="card-backup-title">עוד</p>
+        <p class="card-backup-title">הכרטיס שלי</p>
         <div class="more-list">
           <button type="button" id="more-google-btn" class="more-item hidden">שמירה עם Google</button>
           <button type="button" id="card-settings-switch-replace" class="more-item">שחזור כרטיסייה</button>

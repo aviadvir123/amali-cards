@@ -18,7 +18,7 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 - Production is `docs/` (served by GitHub Pages from `main`).
 
 ## Releasing changes safely (existing customers must never lose data)
-- Build in `docs/beta/` first (live at /amali-cards/beta/, same origin as production, so it reads the real cards on each phone). Red "בטא" badge marks it.
+- Build in `docs/beta/` first (live at /amali-cards/beta/, same origin as production, so it reads the real cards on each phone). Red "בטא" badge marks it. Bump the `?v=` on `app.js`/`style.css` in `docs/beta/index.html` on every beta change so phones load the new code.
 - Run tests against beta and production: `python3 tests/test_compat.py docs beta/`, `python3 tests/test_compat.py docs`, `python3 tests/test_gift_staff.py docs beta/`.
 - After the owner approves the beta: `python3 tools/promote_beta.py <next version>` copies it to `docs/` under new file names (`app-<v>.js`, `style-<v>.css`) so cached old pages never mix with new scripts; old files stay. Then run the tests with `python3 tests/test_compat.py docs "" --full`. Review `git diff docs/`.
 - Never rename or delete the phone storage keys (`amali_punch_card`, `amali_card_id`, `amali_used_promos`, `amali_active_promo`). Cloud card docs (`cards/{id}`) are written with `merge: true`; only add fields.

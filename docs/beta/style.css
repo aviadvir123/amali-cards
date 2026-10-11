@@ -1481,16 +1481,4 @@ body.celebration-active {
 .app-banner--google .app-banner-title { margin: 0 36px; font-size: 1.05rem; }
 .app-banner-gbtn { min-height: 44px; display: flex; justify-content: center; }
 
-/* Footer: three actions (bit, directions, Wi-Fi), icon above label */
-.footer-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.footer-action {
-  height: auto;
-  min-height: 64px;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 4px;
-  font-size: 0.85rem;
-  border: none;
-  font-family: var(--font-stack);
-  cursor: pointer;
-}
+.social-link--wifi { background: none; border: none; padding: 0; cursor: pointer; color: var(--brand-blue); }

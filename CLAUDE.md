@@ -17,6 +17,13 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 - Security is enforced by `firestore.rules` (paste into Firebase Console → Firestore → Rules). Owners = `ownerEmails()` there and `OWNER_EMAILS` in `staff.html` — keep both in sync.
 - Production is `docs/`; `src/` is a stale copy.
 
+## Releasing changes safely (existing customers must never lose data)
+- Build in `docs/beta/` first (live at /amali-cards/beta/, same origin as production, so it reads the real cards on each phone). Red "בטא" badge marks it.
+- Run tests against beta and production: `python3 tests/test_compat.py docs beta/`, `python3 tests/test_compat.py docs`, `python3 tests/test_gift_staff.py docs beta/`.
+- After the owner approves the beta: `python3 tools/promote_beta.py` copies it to `docs/` (fixes asset paths, removes the badge). Review `git diff docs/`.
+- Never rename or delete the phone storage keys (`amali_punch_card`, `amali_card_id`, `amali_used_promos`, `amali_active_promo`). Cloud card docs (`cards/{id}`) are written with `merge: true`; only add fields.
+- Punch code: set by staff on staff.html (Firestore `settings/punch`), cached on the phone (`amali_punch_code`); `PUNCH_CODE` in app.js is only the fallback.
+
 ## Constraints
 - Zero cost — development, hosting, production all free
 - No app store — works without install

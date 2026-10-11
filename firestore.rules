@@ -106,6 +106,23 @@ service cloud.firestore {
         && after.history is list;
     }
 
+    // ── הגדרות: קוד הניקוב ────────────────────────────────────
+    // האפליקציה של הלקוח קוראת את הקוד; רק צוות משנה אותו.
+    match /settings/{doc} {
+      allow get: if doc == 'punch';
+      allow list: if false;
+      allow create, update: if isStaff()
+        && doc == 'punch'
+        && request.resource.data.keys().hasOnly(['code', 'updatedBy', 'updatedAt'])
+        && request.resource.data.code is string
+        && request.resource.data.code.size() >= 1
+        && request.resource.data.code.size() <= 20
+        && request.resource.data.updatedBy is string
+        && request.resource.data.updatedBy.size() <= 60
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner();
+    }
+
     // ── צוות ──────────────────────────────────────────────────
     // מזהה המסמך הוא המייל של העובד/ת באותיות קטנות.
     match /staff/{email} {

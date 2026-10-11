@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>עמלי - צוות</title>
+  <link rel="icon" type="image/png" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --blue: rgb(32, 80, 130);
+      --blue-soft: rgba(32, 80, 130, 0.06);
+      --blue-line: rgba(32, 80, 130, 0.25);
+      --green: #1E8C4E;
+      --red: #C0392B;
+      --bg: #F5F5F5;
+      --white: #FFFFFF;
+      --font: 'Alef', -apple-system, sans-serif;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: var(--font); font-size: 16px; font-weight: 700; -webkit-text-size-adjust: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--blue);
+      min-height: 100vh;
+      padding-bottom: 48px;
+    }
+
+    .header {
+      background: var(--blue);
+      color: var(--white);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    .header-title { font-size: 1.1rem; }
+    .header-user { font-size: 0.8rem; font-weight: 400; opacity: 0.85; text-align: left; }
+    .header-user button {
+      background: none; border: none; color: inherit; font: inherit;
+      text-decoration: underline; cursor: pointer; margin-top: 2px;
+    }
+
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 2px solid var(--blue);
+      padding: 18px 16px;
+    }
+    .card-title { font-size: 1.05rem; margin-bottom: 12px; }
+    .card-sub { font-size: 0.85rem; font-weight: 400; opacity: 0.7; margin: -6px 0 12px; }
+
+    input[type="text"], input[type="number"], input[type="email"] {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 2px solid var(--blue-line);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: var(--font);
+      font-weight: 700;
+      color: var(--blue);
+      background: var(--white);
+      outline: none;
+      margin-bottom: 10px;
+    }
+    input:focus { border-color: var(--blue); }
+    .ltr { direction: ltr; text-align: left; }
+    .code-input { direction: ltr; text-align: center; letter-spacing: 0.12em; text-transform: uppercase; font-size: 1.15rem; }
+
+    .row { display: flex; gap: 10px; }
+    .row > * { flex: 1; min-width: 0; }
+
+    .btn {
+      width: 100%;
+      min-height: 48px;
+      border: none;
+      border-radius: 8px;
+      background: var(--blue);
+      color: var(--white);
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      touch-action: manipulation;
+      padding: 0 14px;
+    }
+    .btn:disabled { opacity: 0.45; cursor: default; }
+    .btn:active:not(:disabled) { opacity: 0.85; }
+    .btn-outline { background: transparent; color: var(--blue); border: 2px solid var(--blue); }
+    .btn-small { width: auto; min-height: 34px; font-size: 0.85rem; padding: 0 12px; border-radius: 6px; }
+    .btn-red { background: var(--red); }
+    .btn-link {
+      background: none; border: none; color: var(--blue); font: inherit; font-size: 0.85rem;
+      text-decoration: underline; cursor: pointer; padding: 4px 0; opacity: 0.8;
+    }
+
+    .status { margin-top: 10px; font-size: 0.92rem; text-align: center; min-height: 1.3em; }
+    .status.success { color: var(--green); }
+    .status.error { color: var(--red); }
+
+    .balance-box {
+      background: var(--blue-soft);
+      border-radius: 10px;
+      padding: 14px;
+      margin: 4px 0 12px;
+      text-align: center;
+    }
+    .balance-code { font-size: 0.9rem; letter-spacing: 0.08em; direction: ltr; display: inline-block; }
+    .balance-amount { font-size: 2.2rem; line-height: 1.2; margin: 4px 0; }
+    .balance-meta { font-size: 0.82rem; font-weight: 400; opacity: 0.75; }
+    .balance-box.is-empty .balance-amount, .balance-box.is-cancelled .balance-amount { color: var(--red); }
+
+    .history { margin: 0 0 12px; font-size: 0.85rem; font-weight: 400; }
+    .history-row { display: flex; justify-content: space-between; padding: 6px 2px; border-bottom: 1px solid var(--blue-soft); }
+    .history-row:last-child { border-bottom: none; }
+
+    .new-code-box {
+      margin-top: 14px;
+      border: 2px dashed var(--green);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .new-code-value { font-size: 1.8rem; letter-spacing: 0.1em; direction: ltr; margin: 4px 0 10px; user-select: all; }
+
+    .filter-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .chip {
+      border: 2px solid var(--blue); background: transparent; color: var(--blue);
+      border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 0.85rem; cursor: pointer;
+    }
+    .chip.active { background: var(--blue); color: var(--white); }
+
+    .list { display: flex; flex-direction: column; gap: 6px; }
+    .list-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 12px; background: var(--blue-soft); border-radius: 8px;
+      cursor: pointer; text-align: right; border: none; width: 100%; font: inherit; color: inherit;
+    }
+    .list-main { min-width: 0; }
+    .list-code { direction: ltr; display: inline-block; letter-spacing: 0.06em; }
+    .list-note { font-size: 0.8rem; font-weight: 400; opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .list-amount { font-size: 0.95rem; white-space: nowrap; direction: ltr; }
+    .list-amount small { opacity: 0.6; font-weight: 400; }
+    .tag { font-size: 0.72rem; padding: 1px 6px; border-radius: 4px; background: var(--red); color: var(--white); margin-inline-start: 6px; }
+
+    .placeholder { text-align: center; padding: 14px; opacity: 0.5; font-size: 0.9rem; font-weight: 400; }
+    .hint { font-size: 0.8rem; font-weight: 400; opacity: 0.65; margin-top: 8px; text-align: center; }
+
+    .login-wrap { text-align: center; padding: 28px 16px; }
+    .login-wrap img { width: 84px; height: 84px; border-radius: 50%; margin-bottom: 14px; }
+    .login-wrap p { font-weight: 400; margin-bottom: 18px; }
+
+    details summary { cursor: pointer; font-size: 0.88rem; opacity: 0.8; margin-bottom: 10px; list-style-position: inside; }
+
+    .punch-current { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 0 0 14px; }
+    .punch-code-value { font-size: 2.2rem; letter-spacing: 0.12em; direction: ltr; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+<!--BETA--><div style="position:fixed;bottom:0;left:0;z-index:9999;background:#C0392B;color:#fff;font:700 12px sans-serif;padding:3px 10px;border-top-right-radius:8px;pointer-events:none">בטא</div><!--/BETA-->
+
+  <header class="header">
+    <div class="header-title">עמלי · צוות</div>
+    <div class="header-user hidden" id="user-box">
+      <div id="user-name"></div>
+      <button type="button" id="logout-btn">יציאה</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ===== Login ===== -->
+    <section class="card login-wrap hidden" id="login-view">
+      <img src="../logo.png" alt="עמלי">
+      <p>כניסה לצוות עמלי — ניהול כרטיסי מתנה</p>
+      <button type="button" class="btn" id="login-btn">כניסה עם Google</button>
+      <div class="status" id="login-status"></div>
+    </section>
+
+    <!-- ===== Not authorized ===== -->
+    <section class="card login-wrap hidden" id="denied-view">
+      <p>החשבון <b id="denied-email" class="ltr"></b> עדיין לא מורשה.</p>
+      <p>בקשו מהבעלים להוסיף אותו ברשימת הצוות, ואז היכנסו שוב.</p>
+      <button type="button" class="btn btn-outline" id="denied-logout-btn">החלפת חשבון</button>
+    </section>
+
+    <div id="loading-view" class="placeholder">טוען...</div>
+
+    <!-- ===== Staff view ===== -->
+    <div id="staff-view" class="hidden" style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Punch code -->
+      <section class="card" id="punch-card">
+        <h2 class="card-title">קוד ניקוב</h2>
+        <div class="punch-current">
+          <span class="punch-code-value" id="punch-code-value">…</span>
+          <span class="balance-meta" id="punch-code-meta"></span>
+        </div>
+        <div class="row">
+          <input type="text" id="punch-code-input" class="code-input" placeholder="קוד חדש" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" style="flex:2">
+          <button type="button" class="btn" id="punch-code-save" style="flex:1" disabled>שמירה</button>
+        </div>
+        <div class="status" id="punch-code-status"></div>
+      </section>
+
+      <!-- Redeem -->
+      <section class="card" id="redeem-card">
+        <h2 class="card-title">מימוש כרטיס מתנה</h2>
+        <div class="row">
+          <input type="text" id="redeem-code" class="code-input" placeholder="קוד" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="flex:2">
+          <button type="button" class="btn" id="redeem-check-btn" style="flex:1" disabled>בדיקה</button>
+        </div>
+        <div class="status" id="redeem-check-status"></div>
+
+        <div id="redeem-details" class="hidden">
+          <div class="balance-box" id="balance-box">
+            <span class="balance-code" id="balance-code"></span>
+            <div class="balance-amount" id="balance-amount"></div>
+            <div class="balance-meta" id="balance-meta"></div>
+          </div>
+          <div class="history" id="balance-history"></div>
+
+          <div id="redeem-form">
+            <div class="row">
+              <input type="number" id="redeem-amount" class="ltr" placeholder="סכום להורדה ₪" inputmode="numeric" min="1" style="flex:2">
+              <button type="button" class="btn" id="redeem-btn" style="flex:1" disabled>הורדה</button>
+            </div>
+          </div>
+          <div class="status" id="redeem-status"></div>
+
+          <div id="owner-code-actions" class="hidden" style="margin-top:8px;text-align:center;">
+            <button type="button" class="btn-link" id="toggle-active-btn"></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Create -->
+      <section class="card">
+        <h2 class="card-title">כרטיס מתנה חדש</h2>
+        <div class="row">
+          <input type="number" id="new-amount" class="ltr" placeholder="סכום ₪" inputmode="numeric" min="1" max="5000">
+        </div>
+        <input type="text" id="new-note" placeholder="למי / הערה (לא חובה)" maxlength="120" autocomplete="off">
+        <details id="custom-code-details">
+          <summary>קוד מותאם אישית (לא מומלץ)</summary>
+          <input type="text" id="new-custom-code" class="code-input" placeholder="למשל YAEL200" maxlength="24" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+          <p class="hint" style="margin:-4px 0 10px">קוד קצר וקל לנחש פחות בטוח. בלי מילוי — המערכת תיצור קוד אקראי.</p>
+        </details>
+        <button type="button" class="btn" id="create-btn" disabled>יצירת קוד</button>
+        <div class="status" id="create-status"></div>
+
+        <div class="new-code-box hidden" id="new-code-box">
+          <div class="balance-meta">הקוד החדש</div>
+          <div class="new-code-value" id="new-code-value"></div>
+          <div class="row">
+            <button type="button" class="btn btn-outline btn-small" id="copy-code-btn">העתקת קוד</button>
+            <button type="button" class="btn btn-outline btn-small" id="share-code-btn">שליחה ללקוח</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- List -->
+      <section class="card">
+        <h2 class="card-title">כל כרטיסי המתנה</h2>
+        <input type="text" id="list-search" placeholder="חיפוש לפי קוד או הערה" autocomplete="off">
+        <div class="filter-row">
+          <button type="button" class="chip active" data-filter="active">פעילים</button>
+          <button type="button" class="chip" data-filter="used">נוצלו / בוטלו</button>
+          <button type="button" class="chip" data-filter="all">הכל</button>
+        </div>
+        <div class="list" id="codes-list"><div class="placeholder">טוען...</div></div>
+        <div class="hint" id="list-summary"></div>
+      </section>
+
+      <!-- Owner: staff -->
+      <section class="card hidden" id="team-card">
+        <h2 class="card-title">צוות</h2>
+        <p class="card-sub">מי שברשימה יכול/ה להיכנס לדף הזה עם חשבון Google שלו/ה.</p>
+        <div class="list" id="team-list"></div>
+        <div style="height:12px"></div>
+        <input type="text" id="team-name" placeholder="שם" maxlength="60" autocomplete="off">
+        <input type="email" id="team-email" class="ltr" placeholder="Gmail" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <button type="button" class="btn" id="team-add-btn" disabled>הוספה לצוות</button>
+        <div class="status" id="team-status"></div>
+      </section>
+
+      <!-- Owner: legacy import -->
+      <section class="card hidden" id="import-card">
+        <h2 class="card-title">ייבוא קודים מהמערכת הישנה</h2>
+        <p class="card-sub">פעם אחת בלבד: מעביר את הקודים שהיו כתובים בקוד האפליקציה, עם היתרה הנמוכה ביותר שנשמרה אצל לקוחות.</p>
+        <button type="button" class="btn" id="import-btn">ייבוא</button>
+        <div class="status" id="import-status"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ============================================================
+    // CONFIG
+    // ============================================================
+    var FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAWxrXv1t2Ut5onoPuOlw6hFK0xfxNGGhk",
+      authDomain: "amali-cards.firebaseapp.com",
+      projectId: "amali-cards"
+    };
+
+    // Must match ownerEmails() in firestore.rules (the rules are what actually enforce it).
+    var OWNER_EMAILS = ["elisharainer@gmail.com"];
+
+    // Customer app link, used when sharing a new code.
+    var APP_URL = "https://aviadvir123.github.io/amali-cards/";
+
+    // Codes that were hardcoded in app.js before the move to Firestore.
+    var LEGACY_CODES = {
+      "DH180": 180,
+      "NOAM110": 110,
+      "AMAL300-N": 300,
+      "AML100-L": 100,
+      "GFU200": 200
+    };
+
+    // No I, L, O, 0, 1 — easy to read aloud and type.
+    var CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    var CODE_RE = /^[A-Z0-9-]{4,24}$/;
+    var MAX_AMOUNT = 5000;
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function $(id) { return document.getElementById(id); }
+
+    function setStatus(el, text, type) {
+      el.textContent = text || "";
+      el.className = "status" + (type ? " " + type : "");
+    }
+
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    function normalizeCode(raw) {
+      return String(raw || "").toUpperCase().replace(/[\s_]+/g, "").replace(/[–—]/g, "-");
+    }
+
+    // A code typed without its hyphen ("K7QM3XRP") also matches "K7QM-3XRP".
+    function codeCandidates(raw) {
+      var code = normalizeCode(raw);
+      var list = [code];
+      if (code.indexOf("-") === -1 && code.length === 8) {
+        list.push(code.slice(0, 4) + "-" + code.slice(4));
+      }
+      return list.filter(function (c) { return CODE_RE.test(c); });
+    }
+
+    function randomCode() {
+      var bytes = new Uint32Array(8);
+      window.crypto.getRandomValues(bytes);
+      var s = "";
+      for (var i = 0; i < 8; i++) {
+        s += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+        if (i === 3) s += "-";
+      }
+      return s;
+    }
+
+    function shekel(n) { return n + " ₪"; }
+
+    function formatDate(value) {
+      var d = null;
+      if (typeof value === "number") d = new Date(value);
+      else if (value && typeof value.toDate === "function") d = value.toDate();
+      if (!d || isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit" });
+    }
+
+    function friendlyError(err) {
+      var code = err && err.code ? String(err.code) : "";
+      if (code.indexOf("permission-denied") !== -1) return "אין הרשאה לפעולה הזו";
+      if (code.indexOf("unavailable") !== -1) return "אין חיבור לאינטרנט, נסו שוב";
+      if (err && err.userMessage) return err.userMessage;
+      return "משהו השתבש, נסו שוב";
+    }
+
+    function userError(msg) {
+      var e = new Error(msg);
+      e.userMessage = msg;
+      return e;
+    }
+
+    // ============================================================
+    // FIREBASE
+    // ============================================================
+    firebase.initializeApp(FIREBASE_CONFIG);
+    var auth = firebase.auth();
+    var db = firebase.firestore();
+    var codesCol = db.collection("giftCodes");
+    var staffCol = db.collection("staff");
+
+    var me = { email: "", name: "", owner: false };
+    var allCodes = [];      // [{id, ...data}]
+    var listFilter = "active";
+    var current = null;     // currently opened code {id, ...data}
+    var lastCreated = "";
+
+    // ============================================================
+    // AUTH FLOW
+    // ============================================================
+    $("login-btn").addEventListener("click", function () {
+      setStatus($("login-status"), "");
+      var provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      auth.signInWithPopup(provider).catch(function (err) {
+        var c = err && err.code ? String(err.code) : "";
+        if (c.indexOf("popup-closed") !== -1 || c.indexOf("cancelled-popup") !== -1) return;
+        if (c.indexOf("unauthorized-domain") !== -1) {
+          setStatus($("login-status"), "הדומיין לא מאושר ב-Firebase (Authorized domains)", "error");
+          return;
+        }
+        if (c.indexOf("operation-not-allowed") !== -1) {
+          setStatus($("login-status"), "כניסה עם Google לא הופעלה ב-Firebase", "error");
+          return;
+        }
+        setStatus($("login-status"), "הכניסה נכשלה, נסו שוב", "error");
+      });
+    });
+
+    function logout() { auth.signOut(); }
+    $("logout-btn").addEventListener("click", logout);
+    $("denied-logout-btn").addEventListener("click", logout);
+
+    auth.onAuthStateChanged(function (user) {
+      hide($("loading-view"));
+      hide($("login-view")); hide($("denied-view")); hide($("staff-view")); hide($("user-box"));
+      hide($("team-card")); hide($("import-card")); hide($("redeem-details")); hide($("new-code-box"));
+      current = null; allCodes = []; me.owner = false; lastCreated = "";
+      $("redeem-code").value = "";
+      ["redeem-check-status", "redeem-status", "create-status", "team-status", "import-status", "punch-code-status"].forEach(function (id) {
+        setStatus($(id), "");
+      });
+      if (!user) { show($("login-view")); return; }
+
+      me.email = String(user.email || "").toLowerCase();
+      me.owner = OWNER_EMAILS.indexOf(me.email) !== -1;
+      me.name = user.displayName ? user.displayName.split(" ")[0] : me.email.split("@")[0];
+
+      show($("loading-view"));
+      staffCol.doc(me.email).get().then(function (doc) {
+        if (doc.exists && doc.data().name) me.name = doc.data().name;
+        return doc.exists || me.owner;
+      }).catch(function () {
+        return me.owner;
+      }).then(function (allowed) {
+        hide($("loading-view"));
+        if (!allowed) {
+          $("denied-email").textContent = me.email;
+          show($("denied-view"));
+          return;
+        }
+        $("user-name").textContent = me.name;
+        show($("user-box"));
+        show($("staff-view"));
+        if (me.owner) { show($("team-card")); loadTeam(); }
+        loadPunchCode();
+        loadCodes();
+      });
+    });
+
+    // ============================================================
+    // PUNCH CODE (settings/punch) — the customer app reads it
+    // ============================================================
+    var DEFAULT_PUNCH_CODE = "8525"; // = PUNCH_CODE fallback in app.js
+    var settingsRef = db.collection("settings").doc("punch");
+
+    function loadPunchCode() {
+      settingsRef.get().then(function (doc) {
+        var d = doc.exists ? doc.data() : null;
+        if (d && d.code) {
+          $("punch-code-value").textContent = d.code;
+          $("punch-code-meta").textContent = d.updatedBy ? "עודכן ע״י " + d.updatedBy : "";
+        } else {
+          $("punch-code-value").textContent = DEFAULT_PUNCH_CODE;
+          $("punch-code-meta").textContent = "";
+        }
+      }).catch(function (err) {
+        $("punch-code-value").textContent = "—";
+        setStatus($("punch-code-status"), friendlyError(err), "error");
+      });
+    }
+
+    function punchInputValue() { return $("punch-code-input").value.trim(); }
+    $("punch-code-input").addEventListener("input", function () {
+      var v = punchInputValue();
+      $("punch-code-save").disabled = !v || v.length > 20;
+      setStatus($("punch-code-status"), "");
+    });
+    $("punch-code-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !$("punch-code-save").disabled) { e.preventDefault(); savePunchCode(); }
+    });
+    $("punch-code-save").addEventListener("click", savePunchCode);
+
+    function savePunchCode() {
+      var code = punchInputValue();
+      if (!code || code.length > 20) return;
+      if (!confirm("להחליף את קוד הניקוב ל-" + code + "?\nהקוד הקודם יפסיק לעבוד.")) return;
+      $("punch-code-save").disabled = true;
+      settingsRef.set({
+        code: code,
+        updatedBy: me.name.slice(0, 60),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function () {
+        $("punch-code-input").value = "";
+        setStatus($("punch-code-status"), "הקוד עודכן ל-" + code, "success");
+        loadPunchCode();
+      }).catch(function (err) {
+        $("punch-code-save").disabled = false;
+        setStatus($("punch-code-status"), friendlyError(err), "error");
+      });
+    }
+
+    // ============================================================
+    // LOAD + LIST CODES
+    // ============================================================
+    function loadCodes() {
+      return codesCol.get().then(function (snap) {
+        allCodes = [];
+        snap.forEach(function (doc) {
+          var d = doc.data();
+          d.id = doc.id;
+          allCodes.push(d);
+        });
+        allCodes.sort(function (a, b) {
+          var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+          var tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+          return tb - ta;
+        });
+        renderList();
+        updateImportCard();
+      }).catch(function (err) {
+        $("codes-list").innerHTML = "";
+        var p = document.createElement("div");
+        p.className = "placeholder";
+        p.textContent = friendlyError(err);
+        $("codes-list").appendChild(p);
+      });
+    }
+
+    function isOpen(c) { return c.active !== false && c.remaining > 0; }
+
+    function renderList() {
+      var q = normalizeCode($("list-search").value);
+      var qText = $("list-search").value.trim().toLowerCase();
+      var listEl = $("codes-list");
+      listEl.innerHTML = "";
+
+      var shown = allCodes.filter(function (c) {
+        if (listFilter === "active" && !isOpen(c)) return false;
+        if (listFilter === "used" && isOpen(c)) return false;
+        if (!qText) return true;
+        return c.id.indexOf(q) !== -1 || String(c.note || "").toLowerCase().indexOf(qText) !== -1;
+      });
+
+      if (shown.length === 0) {
+        var p = document.createElement("div");
+        p.className = "placeholder";
+        p.textContent = allCodes.length === 0 ? "עדיין אין כרטיסי מתנה" : "אין תוצאות";
+        listEl.appendChild(p);
+      }
+
+      shown.forEach(function (c) {
+        var row = document.createElement("button");
+        row.type = "button";
+        row.className = "list-row";
+
+        var main = document.createElement("div");
+        main.className = "list-main";
+        var codeEl = document.createElement("span");
+        codeEl.className = "list-code";
+        codeEl.textContent = c.id;
+        main.appendChild(codeEl);
+        if (c.active === false) {
+          var tag = document.createElement("span");
+          tag.className = "tag";
+          tag.textContent = "בוטל";
+          main.appendChild(tag);
+        }
+        var noteEl = document.createElement("div");
+        noteEl.className = "list-note";
+        noteEl.textContent = [c.note, formatDate(c.createdAt)].filter(Boolean).join(" · ");
+        main.appendChild(noteEl);
+
+        var amt = document.createElement("div");
+        amt.className = "list-amount";
+        amt.innerHTML = "";
+        amt.appendChild(document.createTextNode(shekel(c.remaining) + " "));
+        var small = document.createElement("small");
+        small.textContent = "/ " + c.amount;
+        amt.appendChild(small);
+
+        row.appendChild(main);
+        row.appendChild(amt);
+        row.addEventListener("click", function () {
+          $("redeem-code").value = c.id;
+          updateRedeemCheckBtn();
+          openCode(c.id);
+          $("redeem-card").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        listEl.appendChild(row);
+      });
+
+      var openCount = allCodes.filter(isOpen);
+      var openSum = openCount.reduce(function (s, c) { return s + c.remaining; }, 0);
+      $("list-summary").textContent = allCodes.length
+        ? openCount.length + " כרטיסים פעילים · יתרה כוללת " + shekel(openSum)
+        : "";
+    }
+
+    $("list-search").addEventListener("input", renderList);
+    Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (chip) {
+      chip.addEventListener("click", function () {
+        listFilter = chip.getAttribute("data-filter");
+        Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
+          c.classList.toggle("active", c === chip);
+        });
+        renderList();
+      });
+    });
+
+    function upsertLocal(c) {
+      var i = allCodes.findIndex(function (x) { return x.id === c.id; });
+      if (i === -1) allCodes.unshift(c); else allCodes[i] = c;
+      renderList();
+    }
+
+    // ============================================================
+    // REDEEM
+    // ============================================================
+    function updateRedeemCheckBtn() {
+      $("redeem-check-btn").disabled = codeCandidates($("redeem-code").value).length === 0;
+    }
+
+    function updateRedeemBtn() {
+      var v = parseInt($("redeem-amount").value, 10);
+      $("redeem-btn").disabled = !current || isNaN(v) || v <= 0;
+    }
+
+    $("redeem-code").addEventListener("input", function () {
+      updateRedeemCheckBtn();
+      setStatus($("redeem-check-status"), "");
+    });
+    $("redeem-code").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !$("redeem-check-btn").disabled) { e.preventDefault(); openCode($("redeem-code").value); }
+    });
+    $("redeem-check-btn").addEventListener("click", function () { openCode($("redeem-code").value); });
+    $("redeem-amount").addEventListener("input", function () { updateRedeemBtn(); setStatus($("redeem-status"), ""); });
+    $("redeem-amount").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !$("redeem-btn").disabled) { e.preventDefault(); redeem(); }
+    });
+    $("redeem-btn").addEventListener("click", redeem);
+
+    function findCode(raw) {
+      var cands = codeCandidates(raw);
+      function next(i) {
+        if (i >= cands.length) return Promise.resolve(null);
+        return codesCol.doc(cands[i]).get().then(function (doc) {
+          if (doc.exists) { var d = doc.data(); d.id = doc.id; return d; }
+          return next(i + 1);
+        });
+      }
+      return next(0);
+    }
+
+    function openCode(raw) {
+      setStatus($("redeem-check-status"), "");
+      setStatus($("redeem-status"), "");
+      $("redeem-check-btn").disabled = true;
+      return findCode(raw).then(function (c) {
+        updateRedeemCheckBtn();
+        if (!c) {
+          current = null;
+          hide($("redeem-details"));
+          setStatus($("redeem-check-status"), "קוד לא נמצא", "error");
+          return;
+        }
+        current = c;
+        $("redeem-code").value = c.id;
+        renderCurrent();
+        $("redeem-amount").value = "";
+        updateRedeemBtn();
+        if (isOpen(c)) $("redeem-amount").focus();
+      }).catch(function (err) {
+        updateRedeemCheckBtn();
+        setStatus($("redeem-check-status"), friendlyError(err), "error");
+      });
+    }
+
+    function renderCurrent() {
+      var c = current;
+      show($("redeem-details"));
+      var box = $("balance-box");
+      box.classList.toggle("is-empty", c.remaining <= 0);
+      box.classList.toggle("is-cancelled", c.active === false);
+      $("balance-code").textContent = c.id;
+      $("balance-amount").textContent = c.active === false ? "בוטל" : shekel(c.remaining);
+      $("balance-meta").textContent = "מתוך " + shekel(c.amount) +
+        (c.note ? " · " + c.note : "") +
+        (c.createdAt ? " · נוצר " + formatDate(c.createdAt) : "");
+
+      var hist = $("balance-history");
+      hist.innerHTML = "";
+      (c.history || []).slice().reverse().slice(0, 8).forEach(function (h) {
+        var row = document.createElement("div");
+        row.className = "history-row";
+        var a = document.createElement("span");
+        a.textContent = "−" + shekel(h.used) + (h.by ? " · " + h.by : "");
+        var b = document.createElement("span");
+        b.textContent = formatDate(h.at);
+        row.appendChild(a); row.appendChild(b);
+        hist.appendChild(row);
+      });
+
+      if (isOpen(c)) show($("redeem-form")); else hide($("redeem-form"));
+
+      if (me.owner) {
+        show($("owner-code-actions"));
+        $("toggle-active-btn").textContent = c.active === false ? "החזרת הכרטיס לפעילות" : "ביטול הכרטיס";
+      } else {
+        hide($("owner-code-actions"));
+      }
+    }
+
+    function redeem() {
+      if (!current) return;
+      var amount = parseInt($("redeem-amount").value, 10);
+      if (isNaN(amount) || amount <= 0) return;
+      if (amount > current.remaining) {
+        setStatus($("redeem-status"), "הסכום גבוה מהיתרה (" + shekel(current.remaining) + ")", "error");
+        return;
+      }
+      var ref = codesCol.doc(current.id);
+      $("redeem-btn").disabled = true;
+      setStatus($("redeem-status"), "מוריד...");
+
+      db.runTransaction(function (tx) {
+        return tx.get(ref).then(function (doc) {
+          if (!doc.exists) throw userError("הקוד לא נמצא");
+          var d = doc.data();
+          if (d.active === false) throw userError("הכרטיס בוטל");
+          if (amount > d.remaining) throw userError("היתרה השתנתה — נשארו " + shekel(d.remaining));
+          var entry = { used: amount, at: Date.now(), by: me.name.slice(0, 60) };
+          var update = { remaining: d.remaining - amount, history: (d.history || []).concat([entry]) };
+          tx.update(ref, update);
+          d.remaining = update.remaining;
+          d.history = update.history;
+          d.id = doc.id;
+          return d;
+        });
+      }).then(function (d) {
+        current = d;
+        upsertLocal(d);
+        renderCurrent();
+        $("redeem-amount").value = "";
+        updateRedeemBtn();
+        setStatus($("redeem-status"),
+          "ירדו " + shekel(amount) + " · נשארו " + shekel(d.remaining), "success");
+      }).catch(function (err) {
+        updateRedeemBtn();
+        setStatus($("redeem-status"), friendlyError(err), "error");
+        // Refresh in case someone else changed it.
+        if (current) openCode(current.id);
+      });
+    }
+
+    $("toggle-active-btn").addEventListener("click", function () {
+      if (!current || !me.owner) return;
+      var makeActive = current.active === false;
+      if (!makeActive && !confirm("לבטל את הכרטיס " + current.id + "? לא יהיה אפשר לממש אותו.")) return;
+      var ref = codesCol.doc(current.id);
+      ref.update({ active: makeActive }).then(function () {
+        current.active = makeActive;
+        upsertLocal(current);
+        renderCurrent();
+        setStatus($("redeem-status"), makeActive ? "הכרטיס הוחזר לפעילות" : "הכרטיס בוטל", "success");
+      }).catch(function (err) {
+        setStatus($("redeem-status"), friendlyError(err), "error");
+      });
+    });
+
+    // ============================================================
+    // CREATE
+    // ============================================================
+    function updateCreateBtn() {
+      var v = parseInt($("new-amount").value, 10);
+      var custom = normalizeCode($("new-custom-code").value);
+      var customOk = !custom || CODE_RE.test(custom);
+      $("create-btn").disabled = isNaN(v) || v <= 0 || v > MAX_AMOUNT || !customOk;
+    }
+    ["new-amount", "new-custom-code", "new-note"].forEach(function (id) {
+      $(id).addEventListener("input", function () { updateCreateBtn(); setStatus($("create-status"), ""); });
+    });
+    $("create-btn").addEventListener("click", createCode);
+
+    function createCode() {
+      var amount = parseInt($("new-amount").value, 10);
+      var note = $("new-note").value.trim().slice(0, 120);
+      var custom = normalizeCode($("new-custom-code").value);
+      if (isNaN(amount) || amount <= 0 || amount > MAX_AMOUNT) return;
+      if (custom && !CODE_RE.test(custom)) {
+        setStatus($("create-status"), "קוד יכול להכיל אותיות באנגלית, מספרים ומקף (4–24 תווים)", "error");
+        return;
+      }
+
+      $("create-btn").disabled = true;
+      hide($("new-code-box"));
+      setStatus($("create-status"), "יוצר...");
+
+      function attempt(tries) {
+        var code = custom || randomCode();
+        var ref = codesCol.doc(code);
+        var data = {
+          amount: amount,
+          remaining: amount,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: me.name.slice(0, 60),
+          history: [],
+          active: true
+        };
+        if (note) data.note = note;
+        return db.runTransaction(function (tx) {
+          return tx.get(ref).then(function (doc) {
+            if (doc.exists) throw userError("EXISTS");
+            tx.set(ref, data);
+          });
+        }).then(function () { return code; }).catch(function (err) {
+          if (err && err.userMessage === "EXISTS") {
+            if (custom) throw userError("הקוד " + code + " כבר קיים");
+            if (tries > 0) return attempt(tries - 1);
+          }
+          throw err;
+        });
+      }
+
+      attempt(3).then(function (code) {
+        lastCreated = code;
+        $("new-code-value").textContent = code;
+        show($("new-code-box"));
+        setStatus($("create-status"), "נוצר כרטיס מתנה על " + shekel(amount), "success");
+        $("new-amount").value = "";
+        $("new-note").value = "";
+        $("new-custom-code").value = "";
+        $("custom-code-details").open = false;
+        updateCreateBtn();
+        upsertLocal({ id: code, amount: amount, remaining: amount, note: note, history: [], active: true,
+                      createdAt: { toMillis: function () { return Date.now(); }, toDate: function () { return new Date(); } } });
+      }).catch(function (err) {
+        updateCreateBtn();
+        setStatus($("create-status"), friendlyError(err), "error");
+      });
+    }
+
+    function shareText(code) {
+      return "קיבלת כרטיס מתנה לעמלי 🎁\nהקוד שלך: " + code +
+        "\nלבדיקת יתרה: " + APP_URL + "?gift=" + encodeURIComponent(code);
+    }
+
+    $("copy-code-btn").addEventListener("click", function () {
+      if (!lastCreated) return;
+      var btn = this;
+      var done = function () { btn.textContent = "הועתק ✓"; setTimeout(function () { btn.textContent = "העתקת קוד"; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(lastCreated).then(done, function () {});
+      }
+    });
+
+    $("share-code-btn").addEventListener("click", function () {
+      if (!lastCreated) return;
+      var text = shareText(lastCreated);
+      if (navigator.share) {
+        navigator.share({ text: text }).catch(function () {});
+      } else {
+        window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+      }
+    });
+
+    // ============================================================
+    // TEAM (owners)
+    // ============================================================
+    function loadTeam() {
+      staffCol.get().then(function (snap) {
+        var list = $("team-list");
+        list.innerHTML = "";
+        OWNER_EMAILS.forEach(function (e) {
+          list.appendChild(teamRow(e, "בעלים", null));
+        });
+        snap.forEach(function (doc) {
+          if (OWNER_EMAILS.indexOf(doc.id) !== -1) return;
+          list.appendChild(teamRow(doc.id, doc.data().name || "", doc.id));
+        });
+      }).catch(function (err) {
+        setStatus($("team-status"), friendlyError(err), "error");
+      });
+    }
+
+    function teamRow(email, label, removableId) {
+      var row = document.createElement("div");
+      row.className = "list-row";
+      row.style.cursor = "default";
+      var main = document.createElement("div");
+      main.className = "list-main";
+      var n = document.createElement("div");
+      n.textContent = label;
+      var e = document.createElement("div");
+      e.className = "list-note ltr";
+      e.textContent = email;
+      main.appendChild(n); main.appendChild(e);
+      row.appendChild(main);
+      if (removableId) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn btn-red btn-small";
+        btn.textContent = "הסרה";
+        btn.addEventListener("click", function () {
+          if (!confirm("להסיר את " + email + " מהצוות?")) return;
+          staffCol.doc(removableId).delete().then(loadTeam).catch(function (err) {
+            setStatus($("team-status"), friendlyError(err), "error");
+          });
+        });
+        row.appendChild(btn);
+      }
+      return row;
+    }
+
+    function teamEmailValue() { return $("team-email").value.trim().toLowerCase(); }
+    function updateTeamBtn() {
+      $("team-add-btn").disabled = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teamEmailValue()) || !$("team-name").value.trim();
+    }
+    $("team-email").addEventListener("input", updateTeamBtn);
+    $("team-name").addEventListener("input", updateTeamBtn);
+    $("team-add-btn").addEventListener("click", function () {
+      var email = teamEmailValue();
+      var name = $("team-name").value.trim().slice(0, 60);
+      $("team-add-btn").disabled = true;
+      staffCol.doc(email).set({
+        name: name,
+        addedBy: me.email,
+        addedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function () {
+        $("team-email").value = ""; $("team-name").value = "";
+        setStatus($("team-status"), name + " נוסף/ה לצוות", "success");
+        loadTeam();
+      }).catch(function (err) {
+        setStatus($("team-status"), friendlyError(err), "error");
+      }).then(updateTeamBtn);
+    });
+
+    // ============================================================
+    // LEGACY IMPORT (owners, one time)
+    // ============================================================
+    function pendingLegacy() {
+      return Object.keys(LEGACY_CODES).filter(function (code) {
+        return !allCodes.some(function (c) { return c.id === code; });
+      });
+    }
+
+    function updateImportCard() {
+      if (me.owner && pendingLegacy().length > 0) show($("import-card")); else hide($("import-card"));
+    }
+
+    $("import-btn").addEventListener("click", function () {
+      var pending = pendingLegacy();
+      if (pending.length === 0) return;
+      $("import-btn").disabled = true;
+      setStatus($("import-status"), "קורא נתונים מכרטיסי לקוחות...");
+
+      // Lowest remaining balance any customer device reported for each code.
+      db.collection("cards").get().then(function (snap) {
+        var lowest = {};
+        snap.forEach(function (doc) {
+          var promos = doc.data().promos || {};
+          Object.keys(promos).forEach(function (code) {
+            var r = promos[code] && promos[code].remaining;
+            if (typeof r !== "number" || isNaN(r)) return;
+            if (lowest[code] === undefined || r < lowest[code]) lowest[code] = r;
+          });
+        });
+
+        var batch = db.batch();
+        var report = [];
+        pending.forEach(function (code) {
+          var amount = LEGACY_CODES[code];
+          var remaining = lowest[code] === undefined ? amount : Math.max(0, Math.min(amount, Math.round(lowest[code])));
+          batch.set(codesCol.doc(code), {
+            amount: amount,
+            remaining: remaining,
+            note: "יובא מהמערכת הישנה" + (remaining < amount ? " · מומשו " + shekel(amount - remaining) : ""),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: me.name.slice(0, 60),
+            history: [],
+            active: true
+          });
+          report.push(code + ": " + shekel(remaining));
+        });
+        return batch.commit().then(function () { return report; });
+      }).then(function (report) {
+        setStatus($("import-status"), "יובאו " + report.length + " קודים — " + report.join(" · "), "success");
+        return loadCodes();
+      }).catch(function (err) {
+        setStatus($("import-status"), friendlyError(err), "error");
+      }).then(function () { $("import-btn").disabled = false; });
+    });
+
+  })();
+  </script>
+</body>
+</html>

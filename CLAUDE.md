@@ -31,37 +31,20 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 
 ## Branding
 - Colors: rgb(32, 80, 130) deep blue + white
-- Multilingual: Hebrew, Arabic, English
-- Geometric shape icons for punch slots (matching physical card)
+- Hebrew only for now
+- Geometric shape icons for punch slots (matching physical card) — keep the punch area's current design
+- Simple, warm, local coffee shop — minimal text, no big-chain loyalty feel
+- No customer phone numbers, names or emails are stored, ever
 
 ## Project Structure
-- `agents/` — AI agent definitions (one file per agent)
-- `brain/` — Knowledge & references
-- `core/` — Project identity and voice
-- `tools/` — Skills & workflows
-- `output/` — Agent-generated work
-- `memory/` — Lessons learned across sessions
-
-## Agents
-- **PM** (`agents/pm.md`) — specs, wireframes, UI/UX, product review
-- **Dev** (`agents/dev.md`) — implementation plans, code
-- **Architect** (`agents/architect.md`) — plan review, code review, tech decisions
-
-## Agent Rules
-- Every agent must read `core/core-identity.md` before starting any task
-- Every agent has its own learning log at `memory/learning-log-[agent-name].md`
-- Every agent updates their learning log after each task
-- All agent output goes to `output/`
+- `docs/` — the live app (index.html, app-<v>.js, style-<v>.css, staff.html, qr-code.html)
+- `docs/beta/` — beta for testing changes on real phones before release
+- `tests/` — compatibility and end-to-end tests (Playwright + Firebase mock)
+- `tools/promote_beta.py` — releases the approved beta
+- `firestore.rules` — Firebase security rules (paste into the console)
 
 ## Process
-1. PM writes detailed spec (wireframes, UI/UX, acceptance criteria) → **owner approves**
-2. Dev writes implementation plan → Architect reviews → iterate → **owner approves**
-3. Dev builds → Architect reviews code
-4. PM + owner review user-facing output
-5. Changes needed? → back to Dev with clear requirements
-6. Owner signs off → next feature
-
-## Living Documents
-- **This file (`CLAUDE.md`)** — update as project evolves, decisions are made, or process changes
-- **`core/core-identity.md`** — update based on owner feedback and project learnings
-- **`memory/learning-log-*.md`** — each agent updates after every task
+1. Agree the change with the owner (Elisha) — she approves every decision
+2. Build it in `docs/beta/`, run the tests, owner tests the beta
+3. Owner says "מאשרת" → promote, run the tests on production, release
+4. Keep this file up to date

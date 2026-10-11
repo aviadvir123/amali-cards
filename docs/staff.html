@@ -175,6 +175,9 @@
 
     details summary { cursor: pointer; font-size: 0.88rem; opacity: 0.8; margin-bottom: 10px; list-style-position: inside; }
 
+    .punch-current { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 0 0 14px; }
+    .punch-code-value { font-size: 2.2rem; letter-spacing: 0.12em; direction: ltr; }
+
     .hidden { display: none !important; }
   </style>
 </head>
@@ -209,6 +212,20 @@
 
     <!-- ===== Staff view ===== -->
     <div id="staff-view" class="hidden" style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Punch code -->
+      <section class="card" id="punch-card">
+        <h2 class="card-title">קוד ניקוב</h2>
+        <div class="punch-current">
+          <span class="punch-code-value" id="punch-code-value">…</span>
+          <span class="balance-meta" id="punch-code-meta"></span>
+        </div>
+        <div class="row">
+          <input type="text" id="punch-code-input" class="code-input" placeholder="קוד חדש" maxlength="20" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" style="flex:2">
+          <button type="button" class="btn" id="punch-code-save" style="flex:1" disabled>שמירה</button>
+        </div>
+        <div class="status" id="punch-code-status"></div>
+      </section>
 
       <!-- Redeem -->
       <section class="card" id="redeem-card">
@@ -444,7 +461,7 @@
       hide($("team-card")); hide($("import-card")); hide($("redeem-details")); hide($("new-code-box"));
       current = null; allCodes = []; me.owner = false; lastCreated = "";
       $("redeem-code").value = "";
-      ["redeem-check-status", "redeem-status", "create-status", "team-status", "import-status"].forEach(function (id) {
+      ["redeem-check-status", "redeem-status", "create-status", "team-status", "import-status", "punch-code-status"].forEach(function (id) {
         setStatus($(id), "");
       });
       if (!user) { show($("login-view")); return; }
@@ -470,9 +487,62 @@
         show($("user-box"));
         show($("staff-view"));
         if (me.owner) { show($("team-card")); loadTeam(); }
+        loadPunchCode();
         loadCodes();
       });
     });
+
+    // ============================================================
+    // PUNCH CODE (settings/punch) — the customer app reads it
+    // ============================================================
+    var DEFAULT_PUNCH_CODE = "8525"; // = PUNCH_CODE fallback in app.js
+    var settingsRef = db.collection("settings").doc("punch");
+
+    function loadPunchCode() {
+      settingsRef.get().then(function (doc) {
+        var d = doc.exists ? doc.data() : null;
+        if (d && d.code) {
+          $("punch-code-value").textContent = d.code;
+          $("punch-code-meta").textContent = d.updatedBy ? "עודכן ע״י " + d.updatedBy : "";
+        } else {
+          $("punch-code-value").textContent = DEFAULT_PUNCH_CODE;
+          $("punch-code-meta").textContent = "";
+        }
+      }).catch(function (err) {
+        $("punch-code-value").textContent = "—";
+        setStatus($("punch-code-status"), friendlyError(err), "error");
+      });
+    }
+
+    function punchInputValue() { return $("punch-code-input").value.trim(); }
+    $("punch-code-input").addEventListener("input", function () {
+      var v = punchInputValue();
+      $("punch-code-save").disabled = !v || v.length > 20;
+      setStatus($("punch-code-status"), "");
+    });
+    $("punch-code-input").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !$("punch-code-save").disabled) { e.preventDefault(); savePunchCode(); }
+    });
+    $("punch-code-save").addEventListener("click", savePunchCode);
+
+    function savePunchCode() {
+      var code = punchInputValue();
+      if (!code || code.length > 20) return;
+      if (!confirm("להחליף את קוד הניקוב ל-" + code + "?\nהקוד הקודם יפסיק לעבוד.")) return;
+      $("punch-code-save").disabled = true;
+      settingsRef.set({
+        code: code,
+        updatedBy: me.name.slice(0, 60),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function () {
+        $("punch-code-input").value = "";
+        setStatus($("punch-code-status"), "הקוד עודכן ל-" + code, "success");
+        loadPunchCode();
+      }).catch(function (err) {
+        $("punch-code-save").disabled = false;
+        setStatus($("punch-code-status"), friendlyError(err), "error");
+      });
+    }
 
     // ============================================================
     // LOAD + LIST CODES

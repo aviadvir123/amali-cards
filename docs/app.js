@@ -18,11 +18,13 @@ var FIREBASE_CONFIG = {
 var CARD_ID_KEY = "amali_card_id";
 
 
-// Change this value to update the punch code for all customers.
-// Can be any string: "2552", "caffe", "Amali2026", "7", etc.
+// The punch code is set by staff on staff.html (Firestore: settings/punch).
+// The app keeps the last code it received, so it also works offline.
+// PUNCH_CODE is only the fallback for a phone that never reached Firestore.
 var PUNCH_CODE = "8525";
+var PUNCH_CODE_CACHE_KEY = "amali_punch_code";
 
-// Change to "text" if PUNCH_CODE contains letters. "numeric" opens the number pad on mobile.
+// Number pad for all-digit codes, full keyboard otherwise (set automatically).
 var INPUT_MODE = "numeric";
 
 // Total punches needed for a free coffee.
@@ -416,7 +418,7 @@ function saveToCloud(stateData) {
     promos: promoData,
     activePromo: activePromo,
     giftCodes: loadSavedGiftCodes()
-  }).catch(function() {});
+  }, { merge: true }).catch(function() {});
 }
 
 function validateCloudState(data) {
@@ -942,13 +944,63 @@ function unlockUI() {
   renderStepper(TOTAL_PUNCHES);
 }
 
+// ---- Punch code (set by staff) ----
+function getPunchCode() {
+  try {
+    var cached = localStorage.getItem(PUNCH_CODE_CACHE_KEY);
+    if (cached) return cached;
+  } catch (e) {}
+  return PUNCH_CODE;
+}
+
+function applyPunchInputMode() {
+  codeInputEl.setAttribute("inputmode", /^[0-9]+$/.test(getPunchCode()) ? "numeric" : "text");
+}
+
+// Fetch the current code from Firestore. callback(code|null) — null when unreachable.
+function refreshPunchCode(callback) {
+  if (!db) { if (callback) callback(null); return; }
+  var done = false;
+  var finish = function (code) { if (done) return; done = true; if (callback) callback(code); };
+  setTimeout(function () { finish(null); }, 4000);
+  db.collection("settings").doc("punch").get()
+    .then(function (doc) {
+      var code = doc.exists ? doc.data().code : null;
+      if (typeof code === "string" && code.trim()) {
+        code = code.trim();
+        try { localStorage.setItem(PUNCH_CODE_CACHE_KEY, code); } catch (e) {}
+        applyPunchInputMode();
+        finish(code);
+      } else {
+        finish(PUNCH_CODE);
+      }
+    })
+    .catch(function () { finish(null); });
+}
+
+// callback(true|false). Checks the known code first; on a miss, re-fetches once
+// in case staff changed the code since this phone last checked.
+function verifyPunchCode(entered, callback) {
+  var e = entered.trim().toLowerCase();
+  if (e && e === getPunchCode().toLowerCase()) { callback(true); return; }
+  if (!e || !db) { callback(false); return; }
+  refreshPunchCode(function (fresh) {
+    callback(!!fresh && e === fresh.toLowerCase());
+  });
+}
+
 function handlePunch() {
   if (isAnimating) return;
+  var entered = codeInputEl.value;
+  punchBtnEl.disabled = true;
+  verifyPunchCode(entered, function (ok) {
+    if (isAnimating) return;
+    applyPunch(ok);
+  });
+}
 
-  var enteredCode = codeInputEl.value.trim().toLowerCase();
-  var correctCode = PUNCH_CODE.toLowerCase();
-
-  if (enteredCode === correctCode) {
+function applyPunch(ok) {
+  if (ok) {
     var oldPunches = state.punches;
     var awardedQuantity = quantity;
     var newPunches = oldPunches + awardedQuantity;
@@ -1193,7 +1245,37 @@ function hidePromoRemoveConfirm() {
   promoRemoveConfirmEl.classList.add("hidden");
 }
 
+// Live balance: while a gift card is open, Firestore pushes every change.
+var giftUnsubscribe = null;
+
+function stopGiftWatch() {
+  if (giftUnsubscribe) { try { giftUnsubscribe(); } catch (e) {} }
+  giftUnsubscribe = null;
+}
+
+function watchGiftCard(code) {
+  stopGiftWatch();
+  if (!db) return;
+  try {
+    giftUnsubscribe = db.collection("giftCodes").doc(code).onSnapshot(function (doc) {
+      if (!doc.exists || currentPromo.code !== code) return;
+      var d = doc.data();
+      d.id = doc.id;
+      var before = currentPromo.amount;
+      if (typeof before === "number" && typeof d.remaining === "number" && d.remaining < before) {
+        showToast("ירדו " + (before - d.remaining) + " ₪ · נשארו " + d.remaining + " ₪", 4000);
+      }
+      renderGiftCard(d);
+    }, function () {});
+  } catch (e) {}
+}
+
 function showGiftCard(data) {
+  renderGiftCard(data);
+  watchGiftCard(data.id);
+}
+
+function renderGiftCard(data) {
   currentPromo = { code: data.id, amount: data.remaining };
   var cancelled = data.active === false;
   promoActiveCodeNameEl.textContent = data.id;
@@ -1293,6 +1375,7 @@ function renderPromoHistory() {
 }
 
 function resetPromoTab() {
+  stopGiftWatch();
   currentPromo = { code: null, amount: null };
   promoInputEl.value = "";
   clearPromoStatus();
@@ -1355,8 +1438,8 @@ function openGiftFromUrl() {
 // ============================================================
 
 (function init() {
-  // Set inputmode from config constant
-  codeInputEl.setAttribute("inputmode", INPUT_MODE);
+  // Number pad or keyboard, depending on the current punch code
+  applyPunchInputMode();
 
   // Check localStorage availability
   if (!checkLocalStorageAvailable()) {
@@ -1367,6 +1450,9 @@ function openGiftFromUrl() {
 
   // Initialize Firebase
   initFirebase();
+
+  // Get the latest punch code set by staff (kept locally for offline use)
+  refreshPunchCode();
 
   // Gift cards: carry over codes from the old system, open ?gift= links
   migrateLegacyGiftCodes();

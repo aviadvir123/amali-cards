@@ -1480,3 +1480,5 @@ body.celebration-active {
 }
 .app-banner--google .app-banner-title { margin: 0 36px; font-size: 1.05rem; }
 .app-banner-gbtn { min-height: 44px; display: flex; justify-content: center; }
+
+.social-link--wifi { background: none; border: none; padding: 0; cursor: pointer; color: var(--brand-blue); }

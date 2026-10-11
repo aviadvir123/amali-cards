@@ -49,8 +49,8 @@ STATES = {
     "full card waiting for free coffee": {"amali_punch_card": card(0, True), "amali_card_id": "PEND22"},
     "card + old gift-code balances": {
         "amali_punch_card": card(2), "amali_card_id": "GIFT33",
-        "amali_used_promos": json.dumps({"DH180": {"remaining": 80, "history": [{"used": 100, "date": "2026-09-01"}]}}),
-        "amali_active_promo": "DH180"},
+        "amali_used_promos": json.dumps({"OLD180": {"remaining": 80, "history": [{"used": 100, "date": "2026-09-01"}]}}),
+        "amali_active_promo": "OLD180"},
     "corrupted card data": {"amali_punch_card": "{not json", "amali_card_id": "BADD44"},
 }
 
@@ -133,7 +133,7 @@ with sync_playwright() as p:
 
     # ---------- B. restore from backup code (cloud) ----------
     cloud = {"cards": {"REST55": {"punches": 6, "celebrationPending": False, "shapeIndices": SHAPES,
-                                   "promos": {"NOAM110": {"remaining": 60, "history": []}}, "activePromo": None}}}
+                                   "promos": {"OLD110": {"remaining": 60, "history": []}}, "activePromo": None}}}
     open_app(page, {}, cloud)
     if one_screen(page):
         page.click("#more-btn")
@@ -159,15 +159,19 @@ with sync_playwright() as p:
         ok(not page.is_visible("#wifi-view"), "Wi-Fi sheet closes")
 
     # ---------- C. punch code ----------
-    open_app(page, {"amali_punch_card": card(1), "amali_card_id": "PUNC66"})
-    punch(page, "8525")
-    ok(progress(page) == "2", "current code 8525 works when staff never set a code")
+    open_app(page, {"amali_punch_card": card(1), "amali_card_id": "PUNC66"}, {"settings": {"punch": {"code": "7777"}}})
+    punch(page, "7777")
+    ok(progress(page) == "2", "code set by staff (7777) works")
+    if page.evaluate("typeof PUNCH_CODE !== 'undefined' && PUNCH_CODE === ''"):
+        open_app(page, {"amali_punch_card": card(1), "amali_card_id": "PUNC66"}, {})
+        punch(page, "1234")
+        ok(progress(page) == "1", "no code is built into the app (nothing works until staff set one)")
 
     if IS_BETA:
         cloud = {"settings": {"punch": {"code": "4321", "updatedBy": "דנה"}}}
         open_app(page, {"amali_punch_card": card(1), "amali_card_id": "PUNC66"}, cloud)
-        punch(page, "8525")
-        ok(progress(page) == "1" and "לא נכון" in page.inner_text("#status-message"), "after staff set 4321, 8525 is rejected")
+        punch(page, "7777")
+        ok(progress(page) == "1" and "לא נכון" in page.inner_text("#status-message"), "after staff set 4321, the old code is rejected")
         punch(page, "4321", qty=2)
         ok(progress(page) == "3", "staff-set code 4321 gives 2 punches")
         ok(ls(page).get("amali_punch_code") == "4321", "code kept on the phone for offline use")

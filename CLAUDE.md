@@ -12,7 +12,7 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 
 ## Gift Cards (כרטיסי מתנה)
 - Codes and balances live in Firestore, collection `giftCodes` (doc id = the code). Nothing is hardcoded in `app.js`.
-- Staff page `docs/staff.html`: Google sign-in, create codes (random by default), redeem, list, cancel. Owners also manage the team and ran the one-time legacy import.
+- Staff page `docs/staff.html`: Google sign-in, create codes (random by default), redeem, list, cancel. Owners also manage the team.
 - Customers only look up a code they know and see its balance; the barista redeems.
 - Security is enforced by `firestore.rules` (paste into Firebase Console → Firestore → Rules). Owners = `ownerEmails()` there and `OWNER_EMAILS` in `staff.html` — keep both in sync.
 - Production is `docs/` (served by GitHub Pages from `main`).
@@ -23,7 +23,7 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 - After the owner approves the beta: `python3 tools/promote_beta.py <next version>` copies it to `docs/` under new file names (`app-<v>.js`, `style-<v>.css`) so cached old pages never mix with new scripts; old files stay. Then run the tests with `python3 tests/test_compat.py docs "" --full`. Review `git diff docs/`.
 - Never rename or delete the phone storage keys (`amali_punch_card`, `amali_card_id`, `amali_used_promos`, `amali_active_promo`). Cloud card docs (`cards/{id}`) are written with `merge: true`; only add fields.
 - Save with Google: Google Identity Services button; the app hashes `"amali-cards:" + sub` (SHA-256) on the phone and stores only `accounts/{hash} -> {cardId}`. Never store email, name or the raw Google ID. Client ID in `GOOGLE_CLIENT_ID` (app.js); its Authorized JavaScript origin is https://aviadvir123.github.io.
-- Punch code: set by staff on staff.html (Firestore `settings/punch`), cached on the phone (`amali_punch_code`); `PUNCH_CODE` in app.js is only the fallback.
+- Punch code: set by staff on staff.html (Firestore `settings/punch`), cached on the phone (`amali_punch_code`). No punch code or gift code is ever written in the repo (it is public).
 
 ## Constraints
 - Zero cost — development, hosting, production all free

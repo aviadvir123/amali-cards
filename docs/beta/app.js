@@ -64,59 +64,112 @@ var GOOGLE_CLIENT_ID = "984463740776-vj09qje9q7rgeg7ammcgjfh9a460g6gm.apps.googl
 var GOOGLE_LINKED_KEY = "amali_google_linked";
 
 // ============================================================
-// SHAPE DEFINITIONS — 16 line-art icons from the horse logo (icons/NAME-gray.png empty, NAME-white.png on a blue tile when punched)
+// SHAPE DEFINITIONS — 16 geometric shapes inspired by the brand
 // Each shape is defined relative to center (0,0) within ~34x34 box.
 // Parts can be 'circle' or 'path' SVG elements.
 // ============================================================
 
 var SHAPE_DEFS = [
-  // 0: the horse logo
-  { parts: [{ elem: "image", name: "horse" }] },
+  // 0: Full Circle
+  { parts: [{ elem: "circle", r: 17 }] },
 
-  // 1: the horse logo, mirrored
-  { parts: [{ elem: "image", name: "horse-m" }] },
+  // 1: Quarter Circle (center at bottom-left, fills upper-right)
+  { parts: [{ elem: "path", d: "M-17,17 L-17,-17 A34,34,0,0,1,17,17 Z" }] },
 
-  // 2: head and mane
-  { parts: [{ elem: "image", name: "head" }] },
+  // 2: Shield (flat top, rounded bottom)
+  { parts: [{ elem: "path", d: "M-16,-17 L16,-17 L16,0 A16,17,0,0,1,-16,0 Z" }] },
 
-  // 3: head and mane, mirrored
-  { parts: [{ elem: "image", name: "head-m" }] },
+  // 3: Crescent (C-shape, opening right)
+  { parts: [{ elem: "path", d: "M13.9,-9.8 A17,17,0,1,0,13.9,9.8 A12,12,0,0,1,13.9,-9.8 Z" }] },
 
-  // 4: tail
-  { parts: [{ elem: "image", name: "tail" }] },
+  // 4: Notched Circle (3/4 circle, bottom-right removed)
+  { parts: [{ elem: "path", d: "M0,0 L0,17 A17,17,0,1,0,17,0 Z" }] },
 
-  // 5: tail, mirrored
-  { parts: [{ elem: "image", name: "tail-m" }] },
+  // 5: Four-Petal Clover (4 overlapping circles in 2x2)
+  { parts: [
+    { elem: "circle", cx: -7, cy: -7, r: 9.5 },
+    { elem: "circle", cx: 7, cy: -7, r: 9.5 },
+    { elem: "circle", cx: -7, cy: 7, r: 9.5 },
+    { elem: "circle", cx: 7, cy: 7, r: 9.5 }
+  ]},
 
-  // 6: spiral leg
-  { parts: [{ elem: "image", name: "spiral" }] },
+  // 6: Pac-Man (mouth ~90deg facing right)
+  { parts: [{ elem: "path", d: "M0,0 L12,12 A17,17,0,1,0,12,-12 Z" }] },
 
-  // 7: spiral leg, mirrored
-  { parts: [{ elem: "image", name: "spiral-m" }] },
+  // 7: Arch (thick inverted U with hollow center)
+  { parts: [{ elem: "path", d: "M-17,3.5 L-17,-8.5 A17,17,0,0,1,17,-8.5 L17,3.5 L9,3.5 L9,-8.5 A9,9,0,0,0,-9,-8.5 L-9,3.5 Z" }] },
 
-  // 8: horseshoe
-  { parts: [{ elem: "image", name: "horseshoe" }] },
+  // 8: Circle Cluster (5 circles in quincunx/dice-5 pattern)
+  { parts: [
+    { elem: "circle", cx: -9, cy: -9, r: 6.5 },
+    { elem: "circle", cx: 9, cy: -9, r: 6.5 },
+    { elem: "circle", cx: 0, cy: 0, r: 6.5 },
+    { elem: "circle", cx: -9, cy: 9, r: 6.5 },
+    { elem: "circle", cx: 9, cy: 9, r: 6.5 }
+  ]},
 
-  // 9: coffee bean
-  { parts: [{ elem: "image", name: "bean" }] },
+  // 9: 8-pointed Star / Asterisk
+  { parts: [{ elem: "path", d: "M0,-17 L3.1,-7.4 L12,-12 L7.4,-3.1 L17,0 L7.4,3.1 L12,12 L3.1,7.4 L0,17 L-3.1,7.4 L-12,12 L-7.4,3.1 L-17,0 L-7.4,-3.1 L-12,-12 L-3.1,-7.4 Z" }] },
 
-  // 10: coffee cup
-  { parts: [{ elem: "image", name: "cup" }] },
+  // 10: Circle Grid (4x4 small circles)
+  { parts: [
+    { elem: "circle", cx: -12, cy: -12, r: 3.2 },
+    { elem: "circle", cx: -4, cy: -12, r: 3.2 },
+    { elem: "circle", cx: 4, cy: -12, r: 3.2 },
+    { elem: "circle", cx: 12, cy: -12, r: 3.2 },
+    { elem: "circle", cx: -12, cy: -4, r: 3.2 },
+    { elem: "circle", cx: -4, cy: -4, r: 3.2 },
+    { elem: "circle", cx: 4, cy: -4, r: 3.2 },
+    { elem: "circle", cx: 12, cy: -4, r: 3.2 },
+    { elem: "circle", cx: -12, cy: 4, r: 3.2 },
+    { elem: "circle", cx: -4, cy: 4, r: 3.2 },
+    { elem: "circle", cx: 4, cy: 4, r: 3.2 },
+    { elem: "circle", cx: 12, cy: 4, r: 3.2 },
+    { elem: "circle", cx: -12, cy: 12, r: 3.2 },
+    { elem: "circle", cx: -4, cy: 12, r: 3.2 },
+    { elem: "circle", cx: 4, cy: 12, r: 3.2 },
+    { elem: "circle", cx: 12, cy: 12, r: 3.2 }
+  ]},
 
-  // 11: sun
-  { parts: [{ elem: "image", name: "sun" }] },
+  // 11: Double Dome (small dome on top, large dome on bottom)
+  { parts: [
+    { elem: "path", d: "M-10,-2 A10,10,0,0,0,10,-2 Z" },
+    { elem: "path", d: "M-17,12 A17,17,0,0,0,17,12 Z" }
+  ]},
 
-  // 12: hills
-  { parts: [{ elem: "image", name: "hills" }] },
+  // 12: Triple Dome (3 stacked semicircles, smallest on top)
+  { parts: [
+    { elem: "path", d: "M-5,-8 A5,5,0,0,0,5,-8 Z" },
+    { elem: "path", d: "M-10,2 A10,10,0,0,0,10,2 Z" },
+    { elem: "path", d: "M-16,13 A16,16,0,0,0,16,13 Z" }
+  ]},
 
-  // 13: leaf
-  { parts: [{ elem: "image", name: "leaf" }] },
+  // 13: Triangle Grid (8 right triangles in checkerboard pattern)
+  { parts: [
+    { elem: "path", d: "M-14,-14 L0,-14 L-14,0 Z" },
+    { elem: "path", d: "M0,-14 L14,-14 L14,0 Z" },
+    { elem: "path", d: "M0,0 L0,-14 L14,0 Z" },
+    { elem: "path", d: "M-14,0 L0,0 L-14,14 Z" },
+    { elem: "path", d: "M0,0 L14,0 L14,14 Z" },
+    { elem: "path", d: "M0,0 L0,14 L-14,14 Z" },
+    { elem: "path", d: "M0,14 L14,0 L14,14 Z" }
+  ]},
 
-  // 14: star
-  { parts: [{ elem: "image", name: "star" }] },
+  // 14: 5-Petal Flower (teardrop petals at 72deg intervals)
+  { parts: [
+    { elem: "path", d: "M0,1.5 C-5,-3.5 -5,-11.5 0,-14.5 C5,-11.5 5,-3.5 0,1.5 Z" },
+    { elem: "path", d: "M0,1.5 C3.2,-4.8 10.8,-7.3 15.2,-3.4 C13.9,2.2 6.3,4.7 0,1.5 Z" },
+    { elem: "path", d: "M0,1.5 C7.0,2.6 11.7,9.1 9.4,14.4 C3.6,15.0 -1.1,8.5 0,1.5 Z" },
+    { elem: "path", d: "M0,1.5 C1.1,8.5 -3.6,15.0 -9.4,14.4 C-11.7,9.1 -7.0,2.6 0,1.5 Z" },
+    { elem: "path", d: "M0,1.5 C-6.3,4.7 -13.9,2.2 -15.2,-3.4 C-10.8,-7.3 -3.2,-4.8 0,1.5 Z" }
+  ]},
 
-  // 15: drop
-  { parts: [{ elem: "image", name: "drop" }] }
+  // 15: Triple Chevron (3 wide leaf shapes fanning upward)
+  { parts: [
+    { elem: "path", d: "M0,14 C-3,6 -16,-2 -14,-12 C-10,-6 -2,4 0,14 Z" },
+    { elem: "path", d: "M0,14 C-3,4 -3,-10 0,-14 C3,-10 3,4 0,14 Z" },
+    { elem: "path", d: "M0,14 C3,6 16,-2 14,-12 C10,-6 2,4 0,14 Z" }
+  ]}
 ];
 
 // Grid positions: 5 columns x 2 rows
@@ -238,21 +291,12 @@ function createSVGElement(part, className, isFill) {
 
   var vecEffect = ' vector-effect="non-scaling-stroke"';
 
-  if (part.elem === "image") {
-    if (isFill) {
-      return '<g class="' + className + '"><rect x="-18" y="-18" width="36" height="36" rx="9" fill="rgb(32,80,130)" stroke="none"/>' +
-        '<image href="icons/' + part.name + '-white.png" x="-15" y="-15" width="30" height="30"/></g>';
-    }
-    return '<image class="' + className + '" href="icons/' + part.name + '-gray.png" x="-17" y="-17" width="34" height="34"/>';
-  }
-
   if (part.elem === "circle") {
     var cx = part.cx || 0;
     var cy = part.cy || 0;
     return '<circle class="' + className + '" cx="' + cx + '" cy="' + cy + '" r="' + part.r + '" ' + fillAttr + ' ' + strokeAttr + vecEffect + '/>';
   } else if (part.elem === "path") {
-    var rule = part.rule ? ' fill-rule="' + part.rule + '"' : '';
-    return '<path class="' + className + '" d="' + part.d + '" ' + fillAttr + rule + ' ' + strokeAttr + vecEffect + '/>';
+    return '<path class="' + className + '" d="' + part.d + '" ' + fillAttr + ' ' + strokeAttr + vecEffect + '/>';
   }
   return '';
 }

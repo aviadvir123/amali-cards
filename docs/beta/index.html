@@ -163,6 +163,10 @@
           </svg>
           <span>איך מגיעים</span>
         </a>
+        <button type="button" id="wifi-btn" class="footer-action">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="footer-action-icon"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+          <span>וויפי</span>
+        </button>
       </div>
       <div class="footer-links">
         <div class="social-links">
@@ -232,6 +236,25 @@
         <div id="card-backup-restore-status" class="status-message hidden" role="status" aria-live="polite"></div>
         <p class="card-backup-link hidden" id="restore-google-link">שחזור עם Google</p>
         <p class="card-backup-link" id="card-backup-switch-new">כרטיס חדש</p>
+      </div>
+
+      <!-- Wi-Fi -->
+      <div id="wifi-view" class="hidden">
+        <p class="card-backup-title">וויפי</p>
+        <div class="more-list">
+          <div class="more-item more-item--static">
+            <span>רשת</span>
+            <span id="wifi-ssid" class="more-code-value" dir="ltr"></span>
+          </div>
+          <div class="more-item more-item--static">
+            <span>סיסמה</span>
+            <span class="more-code">
+              <span id="wifi-password" class="more-code-value" dir="ltr"></span>
+              <button type="button" id="wifi-copy-btn" class="card-backup-copy-btn" aria-label="העתקת הסיסמה">העתקה</button>
+            </span>
+          </div>
+        </div>
+        <button type="button" id="wifi-close-btn" class="punch-btn">סגירה</button>
       </div>
 
       <!-- Save / restore with Google (only an encrypted ID is stored) -->

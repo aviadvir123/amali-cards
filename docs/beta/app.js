@@ -1032,7 +1032,7 @@ function refreshPunchCode(callback, fromServer) {
   if (!db) { if (callback) callback(null); return; }
   var done = false;
   var finish = function (code) { if (done) return; done = true; if (callback) callback(code); };
-  setTimeout(function () { finish(null); }, 8000);
+  setTimeout(function () { finish(null); }, 10000);
   var ref = db.collection("settings").doc("punch");
   (fromServer ? ref.get({ source: "server" }) : ref.get())
     .then(function (doc) {

@@ -1558,7 +1558,8 @@ function withGoogle(ready, onFail) {
           callback: handleGoogleCredential,
           auto_select: true, // only affects the restore prompt below, never the buttons
           cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: true
+          use_fedcm_for_prompt: true,
+          itp_support: true // lets the prompt show on iPhone Safari
         });
         googleInitDone = true;
       }

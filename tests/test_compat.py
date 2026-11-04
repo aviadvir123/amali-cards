@@ -179,18 +179,24 @@ with sync_playwright() as p:
         page.evaluate("window.__mockOffline = true")
         punch(page, "4321")
         ok(progress(page) == "4", "offline: last known code still works")
+        page.fill("#code-input", "1111"); page.click("#punch-btn"); page.wait_for_timeout(1800)
+        ok(progress(page) == "4" and "חיבור" in page.inner_text("#status-message") and page.input_value("#code-input") == "1111",
+           "offline + unknown code: says no connection (not wrong code) and keeps what was typed")
+        page.fill("#code-input", "")
         page.evaluate("window.__mockOffline = false")
+        punch(page, "\u0664\u0663 \u0662\u0661")
+        ok(progress(page) == "5", "Arabic digits and spaces still count as the code")
 
         set_mockdb(page, "db.settings.punch.code = '9999';")
         punch(page, "9999")
-        ok(progress(page) == "5", "staff changed the code a minute ago: new code works right away")
+        ok(progress(page) == ("6" if page.evaluate("typeof normalizePunchCode === 'function'") else "5"), "staff changed the code a minute ago: new code works right away")
         ok(ls(page).get("amali_punch_code") == "9999", "phone picked up the new code")
 
         # cloud merge keeps fields written by other versions
         set_mockdb(page, "db.cards = db.cards || {}; db.cards.PUNC66 = Object.assign(db.cards.PUNC66 || {}, {futureField: 'keep-me'});")
         punch(page, "9999")
         c = mockdb(page)["cards"]["PUNC66"]
-        ok(c.get("futureField") == "keep-me" and c["punches"] == 6, "cloud backup is merged, other fields kept")
+        ok(c.get("futureField") == "keep-me" and c["punches"] == (7 if page.evaluate("typeof normalizePunchCode === 'function'") else 6), "cloud backup is merged, other fields kept")
 
         # ---------- D. live gift balance ----------
         cloud = {"giftCodes": {"LIVE-GIFT": {"amount": 200, "remaining": 200, "history": [], "active": True}}}

@@ -1005,13 +1005,36 @@ function applyPunchInputMode() {
   codeInputEl.setAttribute("inputmode", (!code || /^[0-9]+$/.test(code)) ? "numeric" : "text");
 }
 
+// Spaces, and Arabic/Persian digits some keyboards type, never make a right code wrong.
+function normalizePunchCode(raw) {
+  return String(raw || "").replace(/\s+/g, "")
+    .replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+    .replace(/[\u06F0-\u06F9]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+    .toLowerCase();
+}
+
+// Keep the code current while the app is open, so a code staff just changed works at once.
+function watchPunchCode() {
+  if (!db) return;
+  try {
+    db.collection("settings").doc("punch").onSnapshot(function (doc) {
+      var code = doc && doc.exists ? doc.data().code : null;
+      if (typeof code === "string" && code.trim()) {
+        try { localStorage.setItem(PUNCH_CODE_CACHE_KEY, code.trim()); } catch (e) {}
+        applyPunchInputMode();
+      }
+    }, function () {});
+  } catch (e) {}
+}
+
 // Fetch the current code from Firestore. callback(code|null) — null when unreachable.
-function refreshPunchCode(callback) {
+function refreshPunchCode(callback, fromServer) {
   if (!db) { if (callback) callback(null); return; }
   var done = false;
   var finish = function (code) { if (done) return; done = true; if (callback) callback(code); };
-  setTimeout(function () { finish(null); }, 4000);
-  db.collection("settings").doc("punch").get()
+  setTimeout(function () { finish(null); }, 8000);
+  var ref = db.collection("settings").doc("punch");
+  (fromServer ? ref.get({ source: "server" }) : ref.get())
     .then(function (doc) {
       var code = doc.exists ? doc.data().code : null;
       if (typeof code === "string" && code.trim()) {
@@ -1026,15 +1049,17 @@ function refreshPunchCode(callback) {
     .catch(function () { finish(null); });
 }
 
-// callback(true|false). Checks the known code first; on a miss, re-fetches once
-// in case staff changed the code since this phone last checked.
+// callback(true | false | "offline"). Checks the known code first; on a miss, asks the
+// server once in case staff changed the code since this phone last checked.
 function verifyPunchCode(entered, callback) {
-  var e = entered.trim().toLowerCase();
-  if (e && e === getPunchCode().toLowerCase()) { callback(true); return; }
-  if (!e || !db) { callback(false); return; }
+  var e = normalizePunchCode(entered);
+  if (e && e === normalizePunchCode(getPunchCode())) { callback(true); return; }
+  if (!e) { callback(false); return; }
+  if (!db) { callback(getPunchCode() ? false : "offline"); return; }
   refreshPunchCode(function (fresh) {
-    callback(!!fresh && e === fresh.toLowerCase());
-  });
+    if (!fresh) { callback("offline"); return; }
+    callback(e === normalizePunchCode(fresh));
+  }, true);
 }
 
 function handlePunch() {
@@ -1048,7 +1073,7 @@ function handlePunch() {
 }
 
 function applyPunch(ok) {
-  if (ok) {
+  if (ok === true) {
     var oldPunches = state.punches;
     var awardedQuantity = quantity;
     var newPunches = oldPunches + awardedQuantity;
@@ -1082,6 +1107,10 @@ function applyPunch(ok) {
         }
       });
     }
+  } else if (ok === "offline") {
+    // Couldn't check the code: keep what they typed so they can just try again
+    updatePunchButtonState();
+    showStatusMessage("אין חיבור כרגע, נסו שוב", "error");
   } else {
     codeInputEl.value = "";
     updatePunchButtonState();
@@ -1797,6 +1826,7 @@ bannerCloseEl.addEventListener("click", function () {
 
   // Get the latest punch code set by staff (kept locally for offline use)
   refreshPunchCode();
+  watchPunchCode();
 
   // Gift cards: carry over codes from the old system, open ?gift= links
   migrateLegacyGiftCodes();

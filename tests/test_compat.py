@@ -256,6 +256,21 @@ with sync_playwright() as p:
             page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
             ok(ls(page).get("amali_card_id") == "GOOG11", "new phone: Google brings back the same card (5 punches)")
 
+            if IS_BETA:
+                # erased phone: Google's prompt brings the card back on open, no menus
+                open_app(page, {"__mockPrompt": "1"}, saved_cloud)
+                page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
+                ok(ls(page).get("amali_card_id") == "GOOG11", "erased phone: restored automatically on open (5 punches)")
+                # phone that already has punches: the prompt never replaces its card
+                open_app(page, {"__mockPrompt": "1", "amali_punch_card": card(2), "amali_card_id": "KEEP22"}, saved_cloud)
+                page.wait_for_timeout(600)
+                ok(progress(page) == "2" and ls(page).get("amali_card_id") == "KEEP22", "prompt leaves a phone with punches alone")
+                # account never saved: the prompt links nothing
+                open_app(page, {"__mockPrompt": "1"}, {})
+                page.wait_for_timeout(600)
+                ok(not (mockdb(page).get("accounts") or {}) and ls(page).get("amali_google_linked") != "1",
+                   "prompt with an unsaved account saves nothing")
+
             # phone that already has punches on another card: asks first (test accepts)
             open_app(page, {"amali_punch_card": card(2), "amali_card_id": "OTHR22"}, saved_cloud)
             page.click("#more-btn")

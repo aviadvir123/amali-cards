@@ -20,6 +20,14 @@
       };
       el.appendChild(b);
     },
-    prompt: function () {}, disableAutoSelect: function () {}
+    // The restore prompt "picks" the default account when localStorage.__mockPrompt is "1".
+    prompt: function () {
+      var on = false; try { on = localStorage.getItem("__mockPrompt") === "1"; } catch (e) {}
+      if (!on) return;
+      var payload = { iss: "https://accounts.google.com", aud: cfg.client_id,
+        sub: window.__mockGoogleSub || "111111111111111111111" };
+      setTimeout(function () { cfg.callback({ credential: b64url({ alg: "RS256" }) + "." + b64url(payload) + ".sig", select_by: "auto" }); }, 50);
+    },
+    disableAutoSelect: function () {}
   } } };
 })();

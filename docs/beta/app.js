@@ -1547,8 +1547,8 @@ function openGoogleView() {
 }
 
 var googleInitDone = false;
-// Draws Google's own "המשך עם Google" button into el (waits for Google's script).
-function renderGoogleButton(el, onFail) {
+// Waits for Google's script, initializes once, then calls ready(). onFail if it never loads.
+function withGoogle(ready, onFail) {
   var tries = 0;
   (function waitForGoogle() {
     if (window.google && google.accounts && google.accounts.id) {
@@ -1556,21 +1556,38 @@ function renderGoogleButton(el, onFail) {
         google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredential,
-          auto_select: false,
+          auto_select: true, // only affects the restore prompt below, never the buttons
           cancel_on_tap_outside: true,
           use_fedcm_for_prompt: true
         });
         googleInitDone = true;
       }
-      el.innerHTML = "";
-      google.accounts.id.renderButton(el, {
-        type: "standard", theme: "filled_blue", size: "large", text: "continue_with", shape: "pill", locale: "he", width: 260
-      });
+      ready();
       return;
     }
     if (++tries > 40) { if (onFail) onFail(); return; }
     setTimeout(waitForGoogle, 150);
   })();
+}
+
+// Draws Google's own "המשך עם Google" button into el (waits for Google's script).
+function renderGoogleButton(el, onFail) {
+  withGoogle(function () {
+      el.innerHTML = "";
+      google.accounts.id.renderButton(el, {
+        type: "standard", theme: "filled_blue", size: "large", text: "continue_with", shape: "pill", locale: "he", width: 260
+      });
+  }, onFail);
+}
+
+// This phone's card was erased (iPhone clears website data after ~7 days without a visit,
+// and in-app browsers keep their own). Offer Google's "continue as…" prompt so a returning
+// customer gets the card back in one tap. It only restores; it never links a new card.
+function promptGoogleRestore() {
+  if (!googleEnabled() || inAppBrowser() || !db) return;
+  withGoogle(function () {
+    try { google.accounts.id.prompt(); } catch (e) {}
+  });
 }
 
 function handleGoogleCredential(response) {
@@ -1584,19 +1601,32 @@ function handleGoogleCredential(response) {
     showGoogleStatus("ההתחברות נכשלה, נסו שוב", "error");
     return;
   }
-  showGoogleStatus("שומר...", "");
+  // Buttons report select_by "btn…"; the restore prompt reports anything else.
+  var fromPrompt = !/^btn/.test(String((response && response.select_by) || "btn"));
+  if (!fromPrompt) showGoogleStatus("שומר...", "");
   // Only this one-way hash leaves the phone; the token, name and email are dropped here.
-  sha256Hex("amali-cards:" + sub).then(handleGoogleAccount).catch(function () {
+  sha256Hex("amali-cards:" + sub).then(function (hash) { handleGoogleAccount(hash, fromPrompt); }).catch(function () {
     showGoogleStatus("משהו השתבש, נסו שוב", "error");
   });
 }
 
-function handleGoogleAccount(hash) {
+function handleGoogleAccount(hash, restoreOnly) {
   ensureCardId();
   if (!db) { showGoogleStatus("אין חיבור כרגע, נסו שוב", "error"); return; }
   var ref = db.collection("accounts").doc(hash);
   ref.get().then(function (doc) {
     var linkedCard = doc.exists ? doc.data().cardId : null;
+
+    // From the restore prompt: bring back a saved card, or do nothing.
+    if (restoreOnly) {
+      if (!linkedCard || linkedCard === cardId || state.punches > 0 || state.celebrationPending) return;
+      return new Promise(function (resolve) { loadFromCloud(linkedCard, resolve); }).then(function (cloudData) {
+        if (!cloudData || state.punches > 0 || state.celebrationPending) return;
+        applyCloudCard(linkedCard, cloudData);
+        setGoogleLinked();
+        if (openInstallHint) setTimeout(openInstallHint, 2800); // so it doesn't get erased again
+      });
+    }
 
     // First time with this Google account: save this phone's card under it.
     if (!linkedCard) {
@@ -1770,8 +1800,12 @@ bannerCloseEl.addEventListener("click", function () {
   // (skip cloud save here — card ID not assigned yet)
   try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state)); } catch(e) {}
 
+  // Ask the browser not to clear this site's data (helps mainly on Android)
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {}
+
   // Card ID / cloud sync
   cardId = getStoredCardId();
+  var freshOnThisPhone = !cardId && state.punches === 0 && !state.celebrationPending;
   if (!cardId) {
     // No popup anymore: back up automatically (ID shown in the "עוד" menu)
     ensureCardId();
@@ -1829,6 +1863,8 @@ bannerCloseEl.addEventListener("click", function () {
   })();
 
   updateBanner();
+
+  if (freshOnThisPhone) promptGoogleRestore();
 
   // Check for pending celebration
   if (state.celebrationPending) {

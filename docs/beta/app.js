@@ -213,6 +213,7 @@ var googleBtnSlotEl = document.getElementById("google-btn-slot");
 var googleStatusEl = document.getElementById("google-status");
 var googleCancelEl = document.getElementById("google-cancel");
 var restoreGoogleLinkEl = document.getElementById("restore-google-link");
+var restoreGoogleSlotEl = document.getElementById("restore-google-slot");
 var bannerGoogleSlotEl = document.getElementById("app-banner-gbtn");
 var wifiViewEl = document.getElementById("wifi-view");
 
@@ -670,6 +671,7 @@ cardSettingsSwitchReplaceEl.addEventListener("click", function() {
   cardBackupRestoreBtnEl.disabled = true;
   cardBackupRestoreStatusEl.className = "status-message hidden";
   showAllViews(cardBackupRestoreViewEl);
+  showRestoreGoogleButton();
   // Override "כרטיס חדש" to go back to settings
   cardBackupSwitchNewEl.textContent = "ביטול";
   cardBackupSwitchNewEl.onclick = function() {
@@ -1477,6 +1479,19 @@ function openGiftFromUrl() {
   handlePromoCheck();
 }
 
+// Restore screen: Google's own button on top, one tap. Falls back to the link.
+function showRestoreGoogleButton() {
+  restoreGoogleSlotEl.innerHTML = "";
+  restoreGoogleSlotEl.classList.add("hidden");
+  if (!googleEnabled() || inAppBrowser() || !db) return;
+  restoreGoogleLinkEl.classList.add("hidden");
+  restoreGoogleSlotEl.classList.remove("hidden");
+  renderGoogleButton(restoreGoogleSlotEl, function () {
+    restoreGoogleSlotEl.classList.add("hidden");
+    restoreGoogleLinkEl.classList.remove("hidden");
+  });
+}
+
 // ---- Save with Google ----
 function googleEnabled() { return !!GOOGLE_CLIENT_ID; }
 
@@ -1725,11 +1740,14 @@ function updateBanner() {
   // Google: from the first punch (a brand-new customer sees only the card).
   var hasPunches = state.punches >= 1 || state.celebrationPending;
   if (hasPunches && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("google")) currentBanner = "google";
+  else if (!hasPunches && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("restore")) currentBanner = "restore";
   else if (state.punches >= 2 && openInstallHint && !bannerDismissed("install")) currentBanner = "install";
   if (!currentBanner) { bannerEl.classList.add("hidden"); bannerEl.classList.remove("app-banner--google"); return; }
   var wasGoogle = bannerEl.classList.contains("app-banner--google") && !bannerEl.classList.contains("hidden");
-  if (currentBanner === "google") {
-    bannerTitleEl.textContent = "שמרו את הכרטיסייה";
+  if (currentBanner === "google" || currentBanner === "restore") {
+    var titleText = currentBanner === "google" ? "שמרו את הכרטיסייה" : "כבר יש לכם כרטיסייה שמורה?";
+    if (bannerTitleEl.textContent !== titleText) wasGoogle = false;
+    bannerTitleEl.textContent = titleText;
     bannerBtnEl.classList.add("hidden");
     bannerGoogleSlotEl.classList.remove("hidden");
     bannerEl.classList.add("app-banner--google");
@@ -1751,7 +1769,7 @@ function updateBanner() {
 
 bannerBtnEl.addEventListener("click", function () {
   if (currentBanner === "install" && openInstallHint) openInstallHint();
-  if (currentBanner === "google") openGoogleView();
+  if (currentBanner === "google" || currentBanner === "restore") openGoogleView();
 });
 
 bannerCloseEl.addEventListener("click", function () {

@@ -251,10 +251,23 @@ with sync_playwright() as p:
             open_app(page, {}, saved_cloud)
             page.click("#more-btn")
             page.click("#card-settings-switch-replace")
-            page.click("#restore-google-link")
-            page.click("#google-btn-slot #mock-google-btn")
+            if page.locator("#restore-google-slot").count():
+                page.click("#restore-google-slot #mock-google-btn")  # one tap, right on the restore screen
+            else:
+                page.click("#restore-google-link")
+                page.click("#google-btn-slot #mock-google-btn")
             page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
             ok(ls(page).get("amali_card_id") == "GOOG11", "new phone: Google brings back the same card (5 punches)")
+
+            if IS_BETA:
+                # empty card on the main screen: one tap on the banner restores
+                open_app(page, {}, saved_cloud)
+                ok(page.is_visible("#app-banner #mock-google-btn") and "שמורה" in page.inner_text("#app-banner-title"),
+                   "empty card: restore banner with Google's button")
+                page.click("#app-banner #mock-google-btn")
+                page.wait_for_function("document.querySelector('#progress-count').textContent === '5'", timeout=4000)
+                ok(not page.is_visible("#app-banner") or "שמורה" not in page.inner_text("#app-banner-title"),
+                   "restored from the banner in one tap; banner gone")
 
             if IS_BETA:
                 # erased phone: Google's prompt brings the card back on open, no menus

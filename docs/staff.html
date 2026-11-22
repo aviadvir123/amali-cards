@@ -343,6 +343,32 @@
     // ============================================================
     function $(id) { return document.getElementById(id); }
 
+    // Staff action events for monitoring (../telemetry.js). Carries the staff member's name
+    // (never their email), amounts and Firebase error codes — never gift codes or punch codes.
+    function track(name, attrs, severity) {
+      try {
+        if (typeof window.amaliReport !== "function") return;
+        attrs = attrs || {};
+        if (me && me.name) attrs["staff.name"] = String(me.name).slice(0, 60);
+        if (me) attrs["staff.owner"] = !!me.owner;
+        window.amaliReport(name, attrs, severity || "INFO");
+      } catch (e) {}
+    }
+    function trackFail(name, err) {
+      var attrs = {};
+      if (err && typeof err.code === "string") attrs["error.code"] = err.code.slice(0, 60);
+      else if (err && err.userMessage) {
+        // Map the shown message to a fixed reason (some messages contain the gift code).
+        var m = String(err.userMessage);
+        attrs["error.reason"] = m === "הקוד לא נמצא" ? "not_found"
+          : m === "הכרטיס בוטל" ? "cancelled"
+          : m.indexOf("היתרה השתנתה") === 0 ? "balance_changed"
+          : m.indexOf("כבר קיים") !== -1 ? "code_exists"
+          : "validation";
+      }
+      track(name, attrs, "WARN");
+    }
+
     function setStatus(el, text, type) {
       el.textContent = text || "";
       el.className = "status" + (type ? " " + type : "");
@@ -425,6 +451,7 @@
       auth.signInWithPopup(provider).catch(function (err) {
         var c = err && err.code ? String(err.code) : "";
         if (c.indexOf("popup-closed") !== -1 || c.indexOf("cancelled-popup") !== -1) return;
+        trackFail("staff_login_failed", err);
         if (c.indexOf("unauthorized-domain") !== -1) {
           setStatus($("login-status"), "הדומיין לא מאושר ב-Firebase (Authorized domains)", "error");
           return;
@@ -465,11 +492,13 @@
       }).then(function (allowed) {
         hide($("loading-view"));
         if (!allowed) {
+          track("staff_access_denied", null, "WARN");
           $("denied-email").textContent = me.email;
           show($("denied-view"));
           return;
         }
         $("user-name").textContent = me.name;
+        track("staff_signed_in");
         show($("user-box"));
         show($("staff-view"));
         if (me.owner) { show($("team-card")); loadTeam(); }
@@ -521,10 +550,12 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(function () {
         $("punch-code-input").value = "";
+        track("punch_code_changed");
         setStatus($("punch-code-status"), "הקוד עודכן ל-" + code, "success");
         loadPunchCode();
       }).catch(function (err) {
         $("punch-code-save").disabled = false;
+        trackFail("punch_code_change_failed", err);
         setStatus($("punch-code-status"), friendlyError(err), "error");
       });
     }
@@ -744,6 +775,7 @@
       var amount = parseInt($("redeem-amount").value, 10);
       if (isNaN(amount) || amount <= 0) return;
       if (amount > current.remaining) {
+        track("gift_redeem_rejected", { reason: "over_balance", amount: amount, remaining: current.remaining }, "WARN");
         setStatus($("redeem-status"), "הסכום גבוה מהיתרה (" + shekel(current.remaining) + ")", "error");
         return;
       }
@@ -770,11 +802,13 @@
         upsertLocal(d);
         renderCurrent();
         $("redeem-amount").value = "";
+        track("gift_redeemed", { amount: amount, remaining: d.remaining });
         updateRedeemBtn();
         setStatus($("redeem-status"),
           "ירדו " + shekel(amount) + " · נשארו " + shekel(d.remaining), "success");
       }).catch(function (err) {
         updateRedeemBtn();
+        trackFail("gift_redeem_failed", err);
         setStatus($("redeem-status"), friendlyError(err), "error");
         // Refresh in case someone else changed it.
         if (current) openCode(current.id);
@@ -788,10 +822,12 @@
       var ref = codesCol.doc(current.id);
       ref.update({ active: makeActive }).then(function () {
         current.active = makeActive;
+        track(makeActive ? "gift_reactivated" : "gift_cancelled", { remaining: current.remaining });
         upsertLocal(current);
         renderCurrent();
         setStatus($("redeem-status"), makeActive ? "הכרטיס הוחזר לפעילות" : "הכרטיס בוטל", "success");
       }).catch(function (err) {
+        trackFail("gift_status_change_failed", err);
         setStatus($("redeem-status"), friendlyError(err), "error");
       });
     });
@@ -852,6 +888,7 @@
 
       attempt(3).then(function (code) {
         lastCreated = code;
+        track("gift_created", { amount: amount, custom_code: !!custom, has_note: !!note });
         $("new-code-value").textContent = code;
         show($("new-code-box"));
         setStatus($("create-status"), "נוצר כרטיס מתנה על " + shekel(amount), "success");
@@ -864,6 +901,7 @@
                       createdAt: { toMillis: function () { return Date.now(); }, toDate: function () { return new Date(); } } });
       }).catch(function (err) {
         updateCreateBtn();
+        trackFail("gift_create_failed", err);
         setStatus($("create-status"), friendlyError(err), "error");
       });
     }
@@ -875,6 +913,7 @@
 
     $("copy-code-btn").addEventListener("click", function () {
       if (!lastCreated) return;
+      track("gift_code_copied");
       var btn = this;
       var done = function () { btn.textContent = "הועתק ✓"; setTimeout(function () { btn.textContent = "העתקת קוד"; }, 1500); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -885,6 +924,7 @@
     $("share-code-btn").addEventListener("click", function () {
       if (!lastCreated) return;
       var text = shareText(lastCreated);
+      track("gift_code_shared", { method: navigator.share ? "share" : "whatsapp" });
       if (navigator.share) {
         navigator.share({ text: text }).catch(function () {});
       } else {
@@ -931,7 +971,11 @@
         btn.textContent = "הסרה";
         btn.addEventListener("click", function () {
           if (!confirm("להסיר את " + email + " מהצוות?")) return;
-          staffCol.doc(removableId).delete().then(loadTeam).catch(function (err) {
+          staffCol.doc(removableId).delete().then(function () {
+            track("team_member_removed");
+            return loadTeam();
+          }).catch(function (err) {
+            trackFail("team_change_failed", err);
             setStatus($("team-status"), friendlyError(err), "error");
           });
         });
@@ -956,9 +1000,11 @@
         addedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(function () {
         $("team-email").value = ""; $("team-name").value = "";
+        track("team_member_added", { "member.name": name });
         setStatus($("team-status"), name + " נוסף/ה לצוות", "success");
         loadTeam();
       }).catch(function (err) {
+        trackFail("team_change_failed", err);
         setStatus($("team-status"), friendlyError(err), "error");
       }).then(updateTeamBtn);
     });

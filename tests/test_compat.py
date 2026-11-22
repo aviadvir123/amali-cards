@@ -90,6 +90,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width": 390, "height": 844})
     ctx.route(re.compile(r".*gstatic\.com/firebasejs/.*"), lambda r: r.fulfill(body=MOCK, content_type="application/javascript"))
+    ctx.route(re.compile(r".*(unpkg\.com|dash0\.com).*"), lambda r: r.abort())  # no real telemetry from tests
     ctx.route(re.compile(r".*fonts\.(googleapis|gstatic)\.com/.*"), lambda r: r.fulfill(body="", content_type="text/css"))
     ctx.route(re.compile(r".*accounts\.google\.com/gsi/client.*"), lambda r: r.fulfill(body=MOCK_GSI, content_type="application/javascript"))
     page = ctx.new_page()
@@ -303,6 +304,7 @@ with sync_playwright() as p:
             ig = b.new_context(viewport={"width": 390, "height": 844},
                                user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Instagram 300.0")
             ig.route(re.compile(r".*gstatic\.com/firebasejs/.*"), lambda r: r.fulfill(body=MOCK, content_type="application/javascript"))
+            ig.route(re.compile(r".*(unpkg\.com|dash0\.com).*"), lambda r: r.abort())  # no real telemetry from tests
             ig.route(re.compile(r".*accounts\.google\.com/gsi/client.*"), lambda r: r.fulfill(body=MOCK_GSI, content_type="application/javascript"))
             ipg = ig.new_page()
             ipg.goto(BASE + PREFIX + "index.html")

@@ -11,8 +11,8 @@
 // the code in ?gift=). Requests to Firebase/Google are not traced (their URLs and logs can
 // carry card IDs). Custom events carry only what failed, never codes, card IDs or Google IDs.
 (function () {
-  var DASH0_ENDPOINT = ""; // e.g. "https://ingress.eu-west-1.aws.dash0.com"
-  var DASH0_AUTH_TOKEN = ""; // "auth_…"
+  var DASH0_ENDPOINT = "https://ingress.europe-west4.gcp.dash0.com";
+  var DASH0_AUTH_TOKEN = "auth_5GXlZ69saPgtMcQW0xncNt5MQih1Fkh9";
   var DASH0_DATASET = "default";
   var SDK_URL = "https://unpkg.com/@dash0/sdk-web@0.35.2/dist/dash0.iife.js";
   var SDK_INTEGRITY = "sha384-HUjlVLn4IIaXjoY2iUueLc62um1kFf3wXEbEaXS1n60cmBol1wKetFchE83QsXif";

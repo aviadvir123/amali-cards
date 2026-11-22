@@ -28,6 +28,7 @@ with sync_playwright() as p:
     b = p.chromium.launch()
     ctx = b.new_context(viewport={"width": 390, "height": 844}, locale="he-IL")
     ctx.route(re.compile(r".*gstatic\.com/firebasejs/.*"), lambda r: r.fulfill(body=MOCK, content_type="application/javascript"))
+    ctx.route(re.compile(r".*(unpkg\.com|dash0\.com).*"), lambda r: r.abort())  # no real telemetry from tests
     ctx.route(re.compile(r".*fonts\.(googleapis|gstatic)\.com/.*"), lambda r: r.fulfill(body="", content_type="text/css"))
     page = ctx.new_page()
     page.on("pageerror", lambda e: errors.append(str(e)))

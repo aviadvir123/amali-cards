@@ -434,14 +434,35 @@ function report(name, err) {
 
 var allowPunchDecrease = false;
 
+// Attributes added to every telemetry signal: which app version, and how the app was opened
+// (home-screen icon, an in-app browser like Instagram/WhatsApp, or a regular browser).
+(function setTelemetryContext() {
+  try {
+    if (typeof window.dash0 !== "function") return;
+    var src = (document.currentScript && document.currentScript.src) || "";
+    var m = /app-([0-9A-Za-z_-]+)\.js/.exec(src) || /app\.js\?v=([0-9A-Za-z_-]+)/.exec(src);
+    if (m) window.dash0("addSignalAttribute", "app.version", (/app-/.test(src) ? "v" : "beta-") + m[1]);
+    var ua = navigator.userAgent || "";
+    var launch = "browser";
+    if (window.navigator.standalone || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)) launch = "home_screen";
+    else if (/Instagram/i.test(ua)) launch = "instagram";
+    else if (/FBAN|FBAV|FB_IAB/i.test(ua)) launch = "facebook";
+    else if (/WhatsApp/i.test(ua)) launch = "whatsapp";
+    else if (/TikTok|musical_ly|Bytedance/i.test(ua)) launch = "tiktok";
+    else if (/Line\/|Snapchat/i.test(ua)) launch = "other_in_app";
+    window.dash0("addSignalAttribute", "app.launch", launch);
+  } catch (e) {}
+})();
+
 // Usage / user-facing events (telemetry.js). Attributes must never hold codes or IDs:
 // only counts, flags and the fixed Hebrew message the user saw.
 function track(name, attrs, severity) {
   try {
     if (typeof window.amaliReport !== "function") return;
-    attrs = attrs || {};
-    attrs["online"] = navigator.onLine !== false;
-    window.amaliReport(name, attrs, severity || "INFO");
+    var clean = {};
+    if (attrs) for (var k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) clean[k] = attrs[k];
+    clean["online"] = navigator.onLine !== false;
+    window.amaliReport(name, clean, severity || "INFO");
   } catch (e) {}
 }
 
@@ -1102,11 +1123,15 @@ function handlePunch() {
   if (isAnimating) return;
   var entered = codeInputEl.value;
   punchBtnEl.disabled = true;
+  var checkStart = Date.now();
   verifyPunchCode(entered, function (ok) {
+    lastPunchCheckMs = Date.now() - checkStart;
     if (isAnimating) return;
     applyPunch(ok);
   });
 }
+
+var lastPunchCheckMs = null; // how long the last punch code check took
 
 function applyPunch(ok) {
   if (ok === true) {
@@ -1121,7 +1146,7 @@ function applyPunch(ok) {
     clearStatusMessage();
     lockUI();
 
-    track("punch_ok", { quantity: awardedQuantity, card_completed: newPunches >= TOTAL_PUNCHES });
+    track("punch_ok", { quantity: awardedQuantity, card_completed: newPunches >= TOTAL_PUNCHES, check_ms: lastPunchCheckMs });
     if (newPunches >= TOTAL_PUNCHES) {
       pendingCarryOver = carryOver;
       saveState({ punches: 0, celebrationPending: true, shapeIndices: state.shapeIndices });
@@ -1147,7 +1172,7 @@ function applyPunch(ok) {
   } else if (ok === "offline") {
     // Couldn't check the code: keep what they typed so they can just try again
     updatePunchButtonState();
-    track("punch_offline", null, "WARN");
+    track("punch_offline", { check_ms: lastPunchCheckMs }, "WARN");
     showStatusMessage("אין חיבור כרגע, נסו שוב", "error");
   } else {
     codeInputEl.value = "";
@@ -1155,7 +1180,7 @@ function applyPunch(ok) {
 
     codeInputEl.classList.add("shake");
 
-    track("punch_wrong_code", null, "WARN");
+    track("punch_wrong_code", { check_ms: lastPunchCheckMs }, "WARN");
     showStatusMessage("קוד לא נכון, נסו שוב", "error");
   }
 }
@@ -1544,6 +1569,7 @@ function openGiftFromUrl() {
     window.history.replaceState(null, "", window.location.pathname + window.location.hash);
   } catch (e) {}
   if (giftCodeCandidates(code).length === 0) return;
+  track("gift_link_opened");
   switchTab("promo");
   promoInputEl.value = normalizeGiftCode(code);
   updatePromoCheckBtnState();
@@ -1614,6 +1640,7 @@ function sha256Hex(text) {
 }
 
 function openGoogleView() {
+  track("google_view_opened");
   if (!googleEnabled()) return;
   ensureCardId();
   googleStatusEl.className = "status-message hidden";
@@ -1674,6 +1701,7 @@ function renderGoogleButton(el, onFail) {
 function promptGoogleRestore() {
   if (!googleEnabled() || inAppBrowser() || !db) return;
   withGoogle(function () {
+    track("google_restore_prompted");
     try { google.accounts.id.prompt(); } catch (e) {}
   });
 }
@@ -1814,6 +1842,8 @@ function dismissBanner(type) {
   } catch (e) {}
 }
 
+var lastTrackedBanner = null;
+
 function updateBanner() {
   currentBanner = null;
   // Shown from the second punch on, so a first-time customer sees only the card.
@@ -1822,6 +1852,8 @@ function updateBanner() {
   if (hasPunches && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("google")) currentBanner = "google";
   else if (!hasPunches && googleEnabled() && !isGoogleLinked() && !inAppBrowser() && !bannerDismissed("restore")) currentBanner = "restore";
   else if (state.punches >= 2 && openInstallHint && !bannerDismissed("install")) currentBanner = "install";
+  if (currentBanner && currentBanner !== lastTrackedBanner) track("banner_shown", { type: currentBanner });
+  lastTrackedBanner = currentBanner;
   if (!currentBanner) { bannerEl.classList.add("hidden"); bannerEl.classList.remove("app-banner--google"); return; }
   var wasGoogle = bannerEl.classList.contains("app-banner--google") && !bannerEl.classList.contains("hidden");
   if (currentBanner === "google" || currentBanner === "restore") {
@@ -1848,14 +1880,41 @@ function updateBanner() {
 }
 
 bannerBtnEl.addEventListener("click", function () {
+  track("banner_clicked", { type: currentBanner || "" });
   if (currentBanner === "install" && openInstallHint) openInstallHint();
   if (currentBanner === "google" || currentBanner === "restore") openGoogleView();
 });
 
 bannerCloseEl.addEventListener("click", function () {
+  track("banner_closed", { type: currentBanner || "" });
   if (currentBanner) dismissBanner(currentBanner);
   updateBanner();
 });
+
+// Footer link taps (bit, directions, Instagram, ...). Only which link, nothing else.
+(function () {
+  try {
+    var footer = document.querySelector("footer.footer");
+    if (!footer) return;
+    footer.addEventListener("click", function (e) {
+      try {
+        var el = e.target && e.target.closest ? e.target.closest("a, button, summary") : null;
+        if (!el) return;
+        var href = el.getAttribute("href") || "";
+        var link = el.id === "wifi-btn" ? "wifi"
+          : el.tagName === "SUMMARY" ? "privacy"
+          : /bitpay/.test(href) ? "bit"
+          : /maps\./.test(href) ? "directions"
+          : /instagram/.test(href) ? "instagram"
+          : /facebook/.test(href) ? "facebook"
+          : /amaliroast/.test(href) ? "website"
+          : /forms\.gle/.test(href) ? "jobs"
+          : "other";
+        track("footer_click", { link: link });
+      } catch (err) {}
+    }, true);
+  } catch (e) {}
+})();
 
 // ============================================================
 // INITIALIZATION
@@ -1951,6 +2010,7 @@ bannerCloseEl.addEventListener("click", function () {
     textEl.innerHTML = "מומלץ להוריד את האפליקציה למכשיר :)<br><br>" + step;
 
     openInstallHint = function() {
+      track("install_hint_opened");
       popup.classList.remove("hidden");
       backdrop.classList.remove("hidden");
     };
@@ -1961,6 +2021,7 @@ bannerCloseEl.addEventListener("click", function () {
     });
 
     function closePopup() {
+      if (!popup.classList.contains("hidden")) track("install_hint_closed");
       popup.classList.add("hidden");
       backdrop.classList.add("hidden");
     }

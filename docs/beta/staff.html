@@ -358,7 +358,15 @@
     function trackFail(name, err) {
       var attrs = {};
       if (err && typeof err.code === "string") attrs["error.code"] = err.code.slice(0, 60);
-      else if (err && err.userMessage) attrs["error.type"] = "validation";
+      else if (err && err.userMessage) {
+        // Map the shown message to a fixed reason (some messages contain the gift code).
+        var m = String(err.userMessage);
+        attrs["error.reason"] = m === "הקוד לא נמצא" ? "not_found"
+          : m === "הכרטיס בוטל" ? "cancelled"
+          : m.indexOf("היתרה השתנתה") === 0 ? "balance_changed"
+          : m.indexOf("כבר קיים") !== -1 ? "code_exists"
+          : "validation";
+      }
       track(name, attrs, "WARN");
     }
 
@@ -768,6 +776,7 @@
       var amount = parseInt($("redeem-amount").value, 10);
       if (isNaN(amount) || amount <= 0) return;
       if (amount > current.remaining) {
+        track("gift_redeem_rejected", { reason: "over_balance", amount: amount, remaining: current.remaining }, "WARN");
         setStatus($("redeem-status"), "הסכום גבוה מהיתרה (" + shekel(current.remaining) + ")", "error");
         return;
       }
@@ -905,6 +914,7 @@
 
     $("copy-code-btn").addEventListener("click", function () {
       if (!lastCreated) return;
+      track("gift_code_copied");
       var btn = this;
       var done = function () { btn.textContent = "הועתק ✓"; setTimeout(function () { btn.textContent = "העתקת קוד"; }, 1500); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -915,6 +925,7 @@
     $("share-code-btn").addEventListener("click", function () {
       if (!lastCreated) return;
       var text = shareText(lastCreated);
+      track("gift_code_shared", { method: navigator.share ? "share" : "whatsapp" });
       if (navigator.share) {
         navigator.share({ text: text }).catch(function () {});
       } else {

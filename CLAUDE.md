@@ -27,9 +27,11 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 - Punch code: set by staff on staff.html (Firestore `settings/punch`), cached on the phone (`amali_punch_code`). The app listens to `settings/punch` live while open; on a miss it asks the server (10s). Entered codes ignore spaces and Arabic/Persian digits. If the server can't be reached it says "אין חיבור כרגע" and keeps the typed code, instead of "קוד לא נכון". No punch code or gift code is ever written in the repo (it is public).
 
 ## Error monitoring (OpenTelemetry → Dash0)
-- `docs/telemetry.js` (shared, not versioned) loads the Dash0 Web SDK (pinned version + SRI hash) on index.html and staff.html. Beta loads it as `../telemetry.js`. Endpoint and token go there; while the token is empty nothing loads. The token is public: ingest-only, one dataset.
-- Sends: JS errors, page loads, web vitals, and custom events via `report(name, err)` in app.js (`cloud_load_failed`, `cloud_save_failed`, `punch_code_timeout`, `punch_code_fetch_failed`, `gift_lookup_failed`, `google_*`). Attributes: only the Firebase error code and `online`.
-- Never sends: codes, card IDs, Google IDs, URL query/fragment (scrubbed), Firebase/Google requests (ignored), console logs, clicks, session replay.
+- `docs/telemetry.js` (shared by beta and production, not versioned — a change there reaches production at once) loads the Dash0 Web SDK (pinned version + SRI hash) on index.html and staff.html. Beta loads it as `../telemetry.js`. Endpoint/token/dataset at the top; the token is public: ingest-only, one dataset. Tests block unpkg/dash0 so they never send real data.
+- Per-phone random ID in localStorage `amali_device_id` (sent with `identify`, linked to nothing else).
+- telemetry.js also reports: `resource_load_failed` (a script/stylesheet/image failed), `app_not_ready` (pages with `data-ready-check`; app.js sets `window.__amaliReady`), `rage_click` (4+ clicks on one element within ~1s; our own detector — Dash0's needs session recording; labels masked in code/balance/card-ID/Wi-Fi areas and on the whole staff page).
+- app.js: `report(name, err)` for failures, `track(name, attrs, severity)` for user-facing events: `punch_ok`, `punch_wrong_code`, `punch_offline`, `punches_dropped` (punches went down without a full card or restore), `punches_recovered_from_cloud` (phone had fewer punches than its backup), `card_restored`, `card_restore_not_found`, `gift_found`, `gift_not_found`, `gift_check_offline`, `google_linked`, `google_restored`, `google_error` (with the Hebrew message shown), `storage_unavailable`, plus the `*_failed` events. Attributes hold only counts, flags, fixed messages and Firebase error codes — never codes, card IDs or Google IDs.
+- Never sends: URL query/fragment (scrubbed), Firebase/Google requests (ignored), console logs, session replay.
 - Footer has a short "פרטיות" note about technical error reports. No consent banner (owner's decision).
 
 ## Constraints

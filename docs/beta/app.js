@@ -432,6 +432,19 @@ function report(name, err) {
   } catch (e) {}
 }
 
+var allowPunchDecrease = false;
+
+// Usage / user-facing events (telemetry.js). Attributes must never hold codes or IDs:
+// only counts, flags and the fixed Hebrew message the user saw.
+function track(name, attrs, severity) {
+  try {
+    if (typeof window.amaliReport !== "function") return;
+    attrs = attrs || {};
+    attrs["online"] = navigator.onLine !== false;
+    window.amaliReport(name, attrs, severity || "INFO");
+  } catch (e) {}
+}
+
 function loadFromCloud(id, callback) {
   if (!db) { callback(null); return; }
   db.collection("cards").doc(id).get()
@@ -520,6 +533,7 @@ function handleRestoreCard() {
   loadFromCloud(enteredId, function(cloudData) {
     cardBackupRestoreBtnEl.disabled = false;
     if (!cloudData) {
+      track("card_restore_not_found", null, "WARN");
       cardBackupRestoreStatusEl.textContent = "קוד לא נמצא, נסו שוב";
       cardBackupRestoreStatusEl.className = "status-message error";
       return;
@@ -548,12 +562,15 @@ function applyCloudCard(id, cloudData) {
       try { localStorage.removeItem(GIFT_CODES_KEY); } catch(e) {}
       migrateLegacyGiftCodes();
     }
+    var phoneHadPunches = state ? state.punches : 0;
+    allowPunchDecrease = true;
     saveState(restored);
     renderSVGSlots(state.shapeIndices);
     render();
     showUtilityIcon(myCardBtnEl);
     updateCardIdDisplay();
     hideCardBackupModal();
+    track("card_restored", { punches: restored.punches, phone_had_punches: phoneHadPunches });
     showToast("הכרטיס שוחזר בהצלחה :)");
     if (state.celebrationPending) {
       lockUI();
@@ -791,10 +808,16 @@ function loadState() {
  * Save state to localStorage and cloud. Shows a toast on error.
  */
 function saveState(newState) {
+  // Punches should only go down when a full card is celebrated or a saved card is restored.
+  if (!allowPunchDecrease && state && newState && newState.punches < state.punches && !newState.celebrationPending && !state.celebrationPending) {
+    track("punches_dropped", { from: state.punches, to: newState.punches }, "ERROR");
+  }
+  allowPunchDecrease = false;
   state = newState;
   try {
     localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state));
   } catch (e) {
+    report("local_save_failed", e);
     showToast("לא ניתן לשמור את הכרטיס");
   }
   saveToCloud(state);
@@ -1098,6 +1121,7 @@ function applyPunch(ok) {
     clearStatusMessage();
     lockUI();
 
+    track("punch_ok", { quantity: awardedQuantity, card_completed: newPunches >= TOTAL_PUNCHES });
     if (newPunches >= TOTAL_PUNCHES) {
       pendingCarryOver = carryOver;
       saveState({ punches: 0, celebrationPending: true, shapeIndices: state.shapeIndices });
@@ -1123,6 +1147,7 @@ function applyPunch(ok) {
   } else if (ok === "offline") {
     // Couldn't check the code: keep what they typed so they can just try again
     updatePunchButtonState();
+    track("punch_offline", null, "WARN");
     showStatusMessage("אין חיבור כרגע, נסו שוב", "error");
   } else {
     codeInputEl.value = "";
@@ -1130,6 +1155,7 @@ function applyPunch(ok) {
 
     codeInputEl.classList.add("shake");
 
+    track("punch_wrong_code", null, "WARN");
     showStatusMessage("קוד לא נכון, נסו שוב", "error");
   }
 }
@@ -1403,10 +1429,12 @@ function handlePromoCheck() {
   fetchGiftCode(entered, function (err, data) {
     updatePromoCheckBtnState();
     if (err) {
+      track("gift_check_offline", null, "WARN");
       showPromoStatus("אין חיבור כרגע, נסו שוב", "error");
       return;
     }
     if (!data) {
+      track("gift_not_found", null, "WARN");
       promoInputEl.classList.add("shake");
       showPromoStatus("קוד לא תקף", "error");
       return;
@@ -1415,6 +1443,7 @@ function handlePromoCheck() {
     clearPromoStatus();
     updatePromoCheckBtnState();
     addSavedGiftCode(data.id);
+    track("gift_found");
     showGiftCard(data);
   });
 }
@@ -1560,6 +1589,7 @@ function updateGoogleMenuItem() {
 }
 
 function showGoogleStatus(text, type) {
+  if (type === "error") track("google_error", { message: text }, "WARN");
   if (googleViewEl.classList.contains("hidden") || cardBackupOverlayEl.classList.contains("hidden")) {
     if (type === "error") showToast(text, 3000);
     return;
@@ -1684,6 +1714,7 @@ function handleGoogleAccount(hash, restoreOnly) {
         if (!cloudData || state.punches > 0 || state.celebrationPending) return;
         applyCloudCard(linkedCard, cloudData);
         setGoogleLinked();
+        track("google_restored", { via: "prompt" });
         if (openInstallHint) setTimeout(openInstallHint, 2800); // so it doesn't get erased again
       });
     }
@@ -1694,6 +1725,7 @@ function handleGoogleAccount(hash, restoreOnly) {
         saveToCloud(state);
         setGoogleLinked();
         hideCardBackupModal();
+        track("google_linked", { result: "new" });
         showToast("הכרטיסייה נשמרה עם Google", 2500);
       });
     }
@@ -1702,6 +1734,7 @@ function handleGoogleAccount(hash, restoreOnly) {
     if (linkedCard === cardId) {
       setGoogleLinked();
       hideCardBackupModal();
+      track("google_linked", { result: "already" });
       showToast("הכרטיסייה כבר שמורה עם Google", 2500);
       return;
     }
@@ -1714,6 +1747,7 @@ function handleGoogleAccount(hash, restoreOnly) {
           saveToCloud(state);
           setGoogleLinked();
           hideCardBackupModal();
+          track("google_linked", { result: "relinked" });
           showToast("הכרטיסייה נשמרה עם Google", 2500);
         });
       }
@@ -1722,10 +1756,11 @@ function handleGoogleAccount(hash, restoreOnly) {
       if (hereHasPunches) {
         var ok = confirm("בחשבון הזה שמורה כרטיסייה עם " + saved.punches + " ניקובים.\n" +
           "בטלפון הזה יש " + state.punches + ".\nלעבור לכרטיסייה השמורה?");
-        if (!ok) { hideCardBackupModal(); return; }
+        if (!ok) { track("google_switch_declined"); hideCardBackupModal(); return; }
       }
       applyCloudCard(linkedCard, cloudData);
       setGoogleLinked();
+      track("google_restored", { via: "button" });
     });
   }).catch(function (err) {
     report("google_link_failed", err);
@@ -1832,6 +1867,8 @@ bannerCloseEl.addEventListener("click", function () {
 
   // Check localStorage availability
   if (!checkLocalStorageAvailable()) {
+    window.__amaliReady = true;
+    track("storage_unavailable", null, "ERROR");
     appEl.classList.add("hidden");
     storageErrorEl.classList.remove("hidden");
     return;
@@ -1865,6 +1902,8 @@ bannerCloseEl.addEventListener("click", function () {
   // (skip cloud save here — card ID not assigned yet)
   try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state)); } catch(e) {}
 
+  window.__amaliReady = true;
+
   // Ask the browser not to clear this site's data (helps mainly on Android)
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {}
 
@@ -1882,6 +1921,8 @@ bannerCloseEl.addEventListener("click", function () {
       if (!cloudData || isAnimating || celebrationEl.classList.contains("visible")) return;
       var cloudState = validateCloudState(cloudData);
       if (cloudState.punches > state.punches) {
+        // The phone had fewer punches than its cloud backup: local data was lost or reset.
+        track("punches_recovered_from_cloud", { local_punches: state.punches, cloud_punches: cloudState.punches }, "WARN");
         state = cloudState;
         try { localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(state)); } catch(e) {}
         renderSVGSlots(state.shapeIndices);

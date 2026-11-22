@@ -26,6 +26,12 @@ A customer-side-only app replacing Amali coffee shop's paper punch cards.
 - Auto-restore: on a phone with no card ID and no punches (iPhone clears site data after ~7 days without a visit; in-app browsers and the home-screen icon keep separate storage), the app shows Google's One Tap prompt (`auto_select: true`). A sign-in from the prompt (`select_by` not `btn…`) only restores an already-saved card, never links a new one or replaces a card with punches. After restoring, the add-to-home-screen hint opens. The app also calls `navigator.storage.persist()`. Where the prompt doesn't show, an empty unsaved card gets a closable banner "כבר יש לכם כרטיסייה שמורה?" with Google's button, and the restore screen ("שחזור כרטיסייה") shows Google's button on top — one tap either way.
 - Punch code: set by staff on staff.html (Firestore `settings/punch`), cached on the phone (`amali_punch_code`). The app listens to `settings/punch` live while open; on a miss it asks the server (10s). Entered codes ignore spaces and Arabic/Persian digits. If the server can't be reached it says "אין חיבור כרגע" and keeps the typed code, instead of "קוד לא נכון". No punch code or gift code is ever written in the repo (it is public).
 
+## Error monitoring (OpenTelemetry → Dash0)
+- `docs/telemetry.js` (shared, not versioned) loads the Dash0 Web SDK (pinned version + SRI hash) on index.html and staff.html. Beta loads it as `../telemetry.js`. Endpoint and token go there; while the token is empty nothing loads. The token is public: ingest-only, one dataset.
+- Sends: JS errors, page loads, web vitals, and custom events via `report(name, err)` in app.js (`cloud_load_failed`, `cloud_save_failed`, `punch_code_timeout`, `punch_code_fetch_failed`, `gift_lookup_failed`, `google_*`). Attributes: only the Firebase error code and `online`.
+- Never sends: codes, card IDs, Google IDs, URL query/fragment (scrubbed), Firebase/Google requests (ignored), console logs, clicks, session replay.
+- Footer has a short "פרטיות" note about technical error reports. No consent banner (owner's decision).
+
 ## Constraints
 - Zero cost — development, hosting, production all free
 - No app store — works without install

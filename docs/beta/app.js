@@ -419,11 +419,24 @@ function storeCardId(id) {
   try { localStorage.setItem(CARD_ID_KEY, id); } catch(e) {}
 }
 
+// Error report for monitoring (telemetry.js). Sends only the event name and the
+// Firebase error code (e.g. "unavailable") — never codes, card IDs or Google IDs.
+function report(name, err) {
+  try {
+    if (typeof window.amaliReport !== "function") return;
+    var attrs = {};
+    if (err && typeof err.code === "string") attrs["error.code"] = err.code.slice(0, 60);
+    else if (err && err.name) attrs["error.type"] = String(err.name).slice(0, 60);
+    attrs["online"] = navigator.onLine !== false;
+    window.amaliReport(name, attrs);
+  } catch (e) {}
+}
+
 function loadFromCloud(id, callback) {
   if (!db) { callback(null); return; }
   db.collection("cards").doc(id).get()
     .then(function(doc) { callback(doc.exists ? doc.data() : null); })
-    .catch(function() { callback(null); });
+    .catch(function(err) { report("cloud_load_failed", err); callback(null); });
 }
 
 function saveToCloud(stateData) {
@@ -443,7 +456,7 @@ function saveToCloud(stateData) {
     promos: promoData,
     activePromo: activePromo,
     giftCodes: loadSavedGiftCodes()
-  }, { merge: true }).catch(function() {});
+  }, { merge: true }).catch(function(err) { report("cloud_save_failed", err); });
 }
 
 function validateCloudState(data) {
@@ -1032,7 +1045,7 @@ function refreshPunchCode(callback, fromServer) {
   if (!db) { if (callback) callback(null); return; }
   var done = false;
   var finish = function (code) { if (done) return; done = true; if (callback) callback(code); };
-  setTimeout(function () { finish(null); }, 10000);
+  setTimeout(function () { if (!done) report("punch_code_timeout"); finish(null); }, 10000);
   var ref = db.collection("settings").doc("punch");
   (fromServer ? ref.get({ source: "server" }) : ref.get())
     .then(function (doc) {
@@ -1046,7 +1059,7 @@ function refreshPunchCode(callback, fromServer) {
         finish(PUNCH_CODE);
       }
     })
-    .catch(function () { finish(null); });
+    .catch(function (err) { report("punch_code_fetch_failed", err); finish(null); });
 }
 
 // callback(true | false | "offline"). Checks the known code first; on a miss, asks the
@@ -1282,7 +1295,7 @@ function fetchGiftCode(raw, callback) {
           next(i + 1);
         }
       })
-      .catch(function (err) { callback(err, null); });
+      .catch(function (err) { report("gift_lookup_failed", err); callback(err, null); });
   }
   next(0);
 }
@@ -1643,6 +1656,7 @@ function handleGoogleCredential(response) {
     sub = String(claims.sub || "");
     if (!sub) throw new Error("no sub");
   } catch (e) {
+    report("google_token_invalid", e);
     showGoogleStatus("ההתחברות נכשלה, נסו שוב", "error");
     return;
   }
@@ -1650,7 +1664,8 @@ function handleGoogleCredential(response) {
   var fromPrompt = !/^btn/.test(String((response && response.select_by) || "btn"));
   if (!fromPrompt) showGoogleStatus("שומר...", "");
   // Only this one-way hash leaves the phone; the token, name and email are dropped here.
-  sha256Hex("amali-cards:" + sub).then(function (hash) { handleGoogleAccount(hash, fromPrompt); }).catch(function () {
+  sha256Hex("amali-cards:" + sub).then(function (hash) { handleGoogleAccount(hash, fromPrompt); }).catch(function (err) {
+    report("google_hash_failed", err);
     showGoogleStatus("משהו השתבש, נסו שוב", "error");
   });
 }
@@ -1712,7 +1727,8 @@ function handleGoogleAccount(hash, restoreOnly) {
       applyCloudCard(linkedCard, cloudData);
       setGoogleLinked();
     });
-  }).catch(function () {
+  }).catch(function (err) {
+    report("google_link_failed", err);
     showGoogleStatus("אין חיבור כרגע, נסו שוב", "error");
   });
 }

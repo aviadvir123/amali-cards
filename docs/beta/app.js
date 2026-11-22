@@ -454,8 +454,8 @@ var allowPunchDecrease = false;
   } catch (e) {}
 })();
 
-// Usage / user-facing events (telemetry.js). Attributes must never hold codes or IDs:
-// only counts, flags and the fixed Hebrew message the user saw.
+// Usage / user-facing events (telemetry.js). Punch and gift codes are sent (owner's decision:
+// not personal). Never card IDs, Google IDs or anything personal.
 function track(name, attrs, severity) {
   try {
     if (typeof window.amaliReport !== "function") return;
@@ -1124,6 +1124,7 @@ function handlePunch() {
   var entered = codeInputEl.value;
   punchBtnEl.disabled = true;
   var checkStart = Date.now();
+  lastPunchEntered = String(entered || "").trim().slice(0, 24);
   verifyPunchCode(entered, function (ok) {
     lastPunchCheckMs = Date.now() - checkStart;
     if (isAnimating) return;
@@ -1132,6 +1133,7 @@ function handlePunch() {
 }
 
 var lastPunchCheckMs = null; // how long the last punch code check took
+var lastPunchEntered = ""; // what the customer typed (the shared punch code, not personal)
 
 function applyPunch(ok) {
   if (ok === true) {
@@ -1146,7 +1148,7 @@ function applyPunch(ok) {
     clearStatusMessage();
     lockUI();
 
-    track("punch_ok", { quantity: awardedQuantity, card_completed: newPunches >= TOTAL_PUNCHES, check_ms: lastPunchCheckMs });
+    track("punch_ok", { quantity: awardedQuantity, card_completed: newPunches >= TOTAL_PUNCHES, check_ms: lastPunchCheckMs, code: lastPunchEntered });
     if (newPunches >= TOTAL_PUNCHES) {
       pendingCarryOver = carryOver;
       saveState({ punches: 0, celebrationPending: true, shapeIndices: state.shapeIndices });
@@ -1172,7 +1174,7 @@ function applyPunch(ok) {
   } else if (ok === "offline") {
     // Couldn't check the code: keep what they typed so they can just try again
     updatePunchButtonState();
-    track("punch_offline", { check_ms: lastPunchCheckMs }, "WARN");
+    track("punch_offline", { check_ms: lastPunchCheckMs, code: lastPunchEntered }, "WARN");
     showStatusMessage("אין חיבור כרגע, נסו שוב", "error");
   } else {
     codeInputEl.value = "";
@@ -1180,7 +1182,7 @@ function applyPunch(ok) {
 
     codeInputEl.classList.add("shake");
 
-    track("punch_wrong_code", { check_ms: lastPunchCheckMs }, "WARN");
+    track("punch_wrong_code", { check_ms: lastPunchCheckMs, code: lastPunchEntered }, "WARN");
     showStatusMessage("קוד לא נכון, נסו שוב", "error");
   }
 }
@@ -1454,12 +1456,12 @@ function handlePromoCheck() {
   fetchGiftCode(entered, function (err, data) {
     updatePromoCheckBtnState();
     if (err) {
-      track("gift_check_offline", null, "WARN");
+      track("gift_check_offline", { code: normalizeGiftCode(entered).slice(0, 24) }, "WARN");
       showPromoStatus("אין חיבור כרגע, נסו שוב", "error");
       return;
     }
     if (!data) {
-      track("gift_not_found", null, "WARN");
+      track("gift_not_found", { code: normalizeGiftCode(entered).slice(0, 24) }, "WARN");
       promoInputEl.classList.add("shake");
       showPromoStatus("קוד לא תקף", "error");
       return;
@@ -1468,7 +1470,7 @@ function handlePromoCheck() {
     clearPromoStatus();
     updatePromoCheckBtnState();
     addSavedGiftCode(data.id);
-    track("gift_found");
+    track("gift_found", { code: data.id, remaining: data.remaining });
     showGiftCard(data);
   });
 }
@@ -1569,7 +1571,7 @@ function openGiftFromUrl() {
     window.history.replaceState(null, "", window.location.pathname + window.location.hash);
   } catch (e) {}
   if (giftCodeCandidates(code).length === 0) return;
-  track("gift_link_opened");
+  track("gift_link_opened", { code: normalizeGiftCode(code).slice(0, 24) });
   switchTab("promo");
   promoInputEl.value = normalizeGiftCode(code);
   updatePromoCheckBtnState();

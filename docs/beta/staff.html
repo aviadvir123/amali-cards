@@ -345,7 +345,7 @@
     function $(id) { return document.getElementById(id); }
 
     // Staff action events for monitoring (../telemetry.js). Carries the staff member's name
-    // (never their email), amounts and Firebase error codes — never gift codes or punch codes.
+    // (never their email), amounts, gift/punch codes (owner's decision) and error codes.
     function track(name, attrs, severity) {
       try {
         if (typeof window.amaliReport !== "function") return;
@@ -355,8 +355,8 @@
         window.amaliReport(name, attrs, severity || "INFO");
       } catch (e) {}
     }
-    function trackFail(name, err) {
-      var attrs = {};
+    function trackFail(name, err, extra) {
+      var attrs = extra || {};
       if (err && typeof err.code === "string") attrs["error.code"] = err.code.slice(0, 60);
       else if (err && err.userMessage) {
         // Map the shown message to a fixed reason (some messages contain the gift code).
@@ -551,12 +551,12 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(function () {
         $("punch-code-input").value = "";
-        track("punch_code_changed");
+        track("punch_code_changed", { code: code });
         setStatus($("punch-code-status"), "הקוד עודכן ל-" + code, "success");
         loadPunchCode();
       }).catch(function (err) {
         $("punch-code-save").disabled = false;
-        trackFail("punch_code_change_failed", err);
+        trackFail("punch_code_change_failed", err, { code: code });
         setStatus($("punch-code-status"), friendlyError(err), "error");
       });
     }
@@ -776,7 +776,7 @@
       var amount = parseInt($("redeem-amount").value, 10);
       if (isNaN(amount) || amount <= 0) return;
       if (amount > current.remaining) {
-        track("gift_redeem_rejected", { reason: "over_balance", amount: amount, remaining: current.remaining }, "WARN");
+        track("gift_redeem_rejected", { reason: "over_balance", code: current.id, amount: amount, remaining: current.remaining }, "WARN");
         setStatus($("redeem-status"), "הסכום גבוה מהיתרה (" + shekel(current.remaining) + ")", "error");
         return;
       }
@@ -803,13 +803,13 @@
         upsertLocal(d);
         renderCurrent();
         $("redeem-amount").value = "";
-        track("gift_redeemed", { amount: amount, remaining: d.remaining });
+        track("gift_redeemed", { code: d.id, amount: amount, remaining: d.remaining });
         updateRedeemBtn();
         setStatus($("redeem-status"),
           "ירדו " + shekel(amount) + " · נשארו " + shekel(d.remaining), "success");
       }).catch(function (err) {
         updateRedeemBtn();
-        trackFail("gift_redeem_failed", err);
+        trackFail("gift_redeem_failed", err, current ? { code: current.id } : null);
         setStatus($("redeem-status"), friendlyError(err), "error");
         // Refresh in case someone else changed it.
         if (current) openCode(current.id);
@@ -823,12 +823,12 @@
       var ref = codesCol.doc(current.id);
       ref.update({ active: makeActive }).then(function () {
         current.active = makeActive;
-        track(makeActive ? "gift_reactivated" : "gift_cancelled", { remaining: current.remaining });
+        track(makeActive ? "gift_reactivated" : "gift_cancelled", { code: current.id, remaining: current.remaining });
         upsertLocal(current);
         renderCurrent();
         setStatus($("redeem-status"), makeActive ? "הכרטיס הוחזר לפעילות" : "הכרטיס בוטל", "success");
       }).catch(function (err) {
-        trackFail("gift_status_change_failed", err);
+        trackFail("gift_status_change_failed", err, current ? { code: current.id } : null);
         setStatus($("redeem-status"), friendlyError(err), "error");
       });
     });
@@ -889,7 +889,7 @@
 
       attempt(3).then(function (code) {
         lastCreated = code;
-        track("gift_created", { amount: amount, custom_code: !!custom, has_note: !!note });
+        track("gift_created", { code: code, amount: amount, custom_code: !!custom, has_note: !!note });
         $("new-code-value").textContent = code;
         show($("new-code-box"));
         setStatus($("create-status"), "נוצר כרטיס מתנה על " + shekel(amount), "success");
@@ -902,7 +902,7 @@
                       createdAt: { toMillis: function () { return Date.now(); }, toDate: function () { return new Date(); } } });
       }).catch(function (err) {
         updateCreateBtn();
-        trackFail("gift_create_failed", err);
+        trackFail("gift_create_failed", err, custom ? { code: custom } : null);
         setStatus($("create-status"), friendlyError(err), "error");
       });
     }
@@ -914,7 +914,7 @@
 
     $("copy-code-btn").addEventListener("click", function () {
       if (!lastCreated) return;
-      track("gift_code_copied");
+      track("gift_code_copied", { code: lastCreated });
       var btn = this;
       var done = function () { btn.textContent = "הועתק ✓"; setTimeout(function () { btn.textContent = "העתקת קוד"; }, 1500); };
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -925,7 +925,7 @@
     $("share-code-btn").addEventListener("click", function () {
       if (!lastCreated) return;
       var text = shareText(lastCreated);
-      track("gift_code_shared", { method: navigator.share ? "share" : "whatsapp" });
+      track("gift_code_shared", { code: lastCreated, method: navigator.share ? "share" : "whatsapp" });
       if (navigator.share) {
         navigator.share({ text: text }).catch(function () {});
       } else {
